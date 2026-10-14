@@ -58,3 +58,25 @@ Not verified in the browser pane:
 - Voice (the mic is blocked there).
 - Sound by ear.
 - A real child.
+
+## Round 3: closing the gaps
+
+**Monster options.** v2 had dress-up only. The **Monster Maker** lets her design a whole monster. The choices are 12 colors, 4 shapes, 1–3 eyes, horns/antenna/ears/nothing on top, fangs/buck teeth/none, spots on/off, and a silly-name generator with a labelled name field. It hatches from an egg into a **Homemade monsters** section of the Zoo (up to 6), and it can be dressed up like any other monster.
+
+**Sound, measured.** Every effect was rendered through an `OfflineAudioContext` (`withContext` in `sound.ts`) and checked for silence, clipping and level.
+- **Before:** none silent, none clipping. But the **SPEEDY** reward chime sat at −45.5 dB RMS, about 10 dB under the chomp, so the reward for being fast was the quietest thing in the game. The sparkle (−48) and trail steps (−46) were also faint.
+- **After:** speedy −35.1, chomp −31.6, walk −38.7, sparkle −38.9, with a 1.5× master gain. The loudest overlap (chomp + boss fanfare + speedy) peaks at **0.40**, so no clipping.
+- **Haptics:** Android tablets now buzz on chomp, miss, boss intro and boss win, as a second non-visual cue. They follow the Sounds toggle.
+
+**Voice, end to end on v2** (a fake `SpeechRecognition` driven from the page):
+- "I want to go" → *Didn't catch that* (it no longer counts as 2).
+- Saying only the problem's first number → *Didn't catch that*.
+- Word answers ("seven") and digit answers both resolve.
+- A 10-problem round finished with **NEW RECORD 0:13.5**, saved under `lightning.bests["10"]`.
+
+**Bug found while building the Maker.** The Lightning best-run marker used the class `.ghost` (position absolute, full height). That collided with `.btn.ghost`, so every ghost-style button had been laid out as a full-height absolute bar since the Lightning Round shipped. That included the help demo's **Watch again / Hide**. It's renamed to `.ghost-mark`.
+
+**Still not verifiable here:**
+- A real child's voice through a real mic. The pane blocks the mic, and Android speech recognition needs internet.
+- Whether Android beeps when the recognizer restarts.
+- Hearing the mix on the tablet's own speaker.
