@@ -88,8 +88,9 @@ button:disabled {
 .btn.ghost {
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
-  min-height: 48px;
-  font-size: 1.05rem;
+  min-height: 60px;
+  min-width: 96px;
+  font-size: 1.1rem;
   width: auto;
 }
 .btn.danger {
@@ -107,8 +108,8 @@ button:disabled {
   }
 }
 .icon-btn {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 16px;
   border: 0;
   display: grid;
@@ -406,15 +407,22 @@ button:disabled {
   border-radius: 99px;
   transition: width 0.4s ease;
 }
+.progress {
+  height: 30px;
+}
 .progress-text {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1px 12px;
+  border-radius: 99px;
+  background: rgba(27, 16, 51, 0.88);
   font-size: 0.95rem;
   font-weight: 700;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
 }
 .round-stars {
   display: flex;
@@ -457,7 +465,7 @@ button:disabled {
   background: var(--paper);
   color: var(--ink);
   border-radius: 28px;
-  padding: 10px 70px 10px 26px;
+  padding: 10px 74px 10px 26px;
   box-shadow: var(--card-shadow);
   max-width: 100%;
 }
@@ -556,7 +564,7 @@ button:disabled {
   width: 100%;
 }
 .help-btn {
-  min-height: 48px;
+  min-height: 60px;
   padding: 6px 26px;
   border-radius: 99px;
   border: 2px solid rgba(255, 255, 255, 0.35);
@@ -670,11 +678,11 @@ button:disabled {
 }
 .dot.empty {
   background: transparent;
-  border: 3px dashed #d9cfee;
+  border: 3px dashed #8a76bd;
 }
 .dot.eaten {
-  background: #cfc7de;
-  border: 3px solid #a69bbd;
+  background: #b9aed0;
+  border: 3px solid #5f4c92;
   transform: scale(0.7);
 }
 .dot.left {
@@ -875,6 +883,32 @@ button:disabled {
 .zoo-card.locked .zoo-name {
   color: #b9addc;
 }
+.zoo-card.locked {
+  cursor: pointer;
+}
+.zoo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 20;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 1.15rem;
+  padding: 14px 22px;
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  animation: fadein 0.25s ease;
+}
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+}
 .zoo-badge {
   position: absolute;
   top: 8px;
@@ -995,7 +1029,10 @@ button:disabled {
   color: var(--ink);
 }
 .cell.cross {
-  box-shadow: inset 0 0 0 2px #fff;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+.cell.cross:is(.fluent, .learning, .missed) {
+  box-shadow: inset 0 0 0 3px var(--ink);
 }
 .trouble {
   list-style: none;
@@ -1186,6 +1223,17 @@ button:disabled {
   }
 }
 @media (max-width: 540px) {
+  .frames {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .frame {
+    gap: 4px;
+    padding: 6px;
+  }
+  .dot {
+    width: 22px;
+  }
   .card {
     padding: 8px 62px 8px 18px;
   }

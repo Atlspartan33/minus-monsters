@@ -132,18 +132,19 @@ export function Play({ round, m, readAloud, onAnswer, onFinish, onQuit }: Props)
     (k: string) => {
       if (busy) return;
       if (k === 'go') return submit();
-      sfx.key();
       if (k === 'del') setEntry((e) => e.slice(0, -1));
       else setEntry((e) => (e.length >= 3 ? e : e === '0' ? k : e + k));
+      sfx.key();
     },
     [busy, submit],
   );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (/^[0-9]$/.test(e.key)) press(e.key);
-      else if (e.key === 'Backspace') press('del');
-      else if (e.key === 'Enter') press('go');
+      const k = /^[0-9]$/.test(e.key) ? e.key : e.key === 'Backspace' ? 'del' : e.key === 'Enter' ? 'go' : null;
+      if (!k) return;
+      e.preventDefault(); // keeps Enter on a focused key from also clicking it
+      press(k);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -168,10 +169,10 @@ export function Play({ round, m, readAloud, onAnswer, onFinish, onQuit }: Props)
             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
           </svg>
         </button>
-        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={queue.length} aria-valuenow={idx} aria-label="Bites left in this round">
+        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={queue.length} aria-valuenow={idx} aria-label="Round progress">
           <div className="progress-fill" style={{ width: `${(idx / queue.length) * 100}%` }} />
           <span className="progress-text">
-            {idx + 1} / {queue.length}
+            {queue.length - idx} {queue.length - idx === 1 ? 'bite' : 'bites'} left
           </span>
         </div>
         <div className="round-stars" aria-label={`${roundStars} stars this round`}>

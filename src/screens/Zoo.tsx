@@ -1,7 +1,18 @@
+import { useRef, useState } from 'react';
 import { MONSTERS, Monster } from '../monsters';
-import type { Save } from '../store';
+import { sfx } from '../sound';
+import { EGG_COST, type Save } from '../store';
 
 export function Zoo({ save, onPick, onBack }: { save: Save; onPick: (id: string) => void; onBack: () => void }) {
+  const [toast, setToast] = useState<string | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+
+  const say = (text: string) => {
+    setToast(text);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setToast(null), 2200);
+  };
+
   return (
     <main className="zoo">
       <header className="sub-top">
@@ -24,9 +35,18 @@ export function Zoo({ save, onPick, onBack }: { save: Save; onPick: (id: string)
             <button
               key={m.id}
               className={`zoo-card ${cur ? 'current' : ''} ${owned ? '' : 'locked'}`}
-              disabled={!owned}
-              onClick={() => onPick(m.id)}
-              aria-pressed={cur}
+              aria-disabled={!owned}
+              onClick={() => {
+                if (owned) {
+                  sfx.boing();
+                  onPick(m.id);
+                  say(`${m.name} is hungry next!`);
+                } else {
+                  sfx.oops();
+                  say(`Hatch an egg to meet me! ${Math.min(save.egg, EGG_COST)}/${EGG_COST} stars`);
+                }
+              }}
+              aria-pressed={owned ? cur : undefined}
               aria-label={owned ? `${m.name}${cur ? ', picked' : ''}` : 'Locked monster'}
             >
               <div className="zoo-art">
@@ -38,6 +58,11 @@ export function Zoo({ save, onPick, onBack }: { save: Save; onPick: (id: string)
           );
         })}
       </div>
+      {toast && (
+        <div className="zoo-toast" role="status" key={toast}>
+          {toast}
+        </div>
+      )}
     </main>
   );
 }

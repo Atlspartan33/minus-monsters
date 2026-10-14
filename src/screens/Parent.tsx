@@ -83,7 +83,8 @@ export function Parent({ save, onSettings, onReset, onBack }: Props) {
         <h3>Fact map: the 81 basic facts</h3>
         <div className="legend">
           <span className="cell fluent">✓</span> fast and right <span className="cell learning">•</span> right, not fast yet{' '}
-          <span className="cell missed">✗</span> missed recently <span className="cell unseen" /> not seen
+          <span className="cell missed">✗</span> missed recently <span className="cell unseen" /> not seen{' '}
+          <span className="cell learning cross">•</span> ringed = crossing ten
         </div>
         <div className="grid-scroll">
           <table className="fact-grid">
@@ -120,7 +121,7 @@ export function Parent({ save, onSettings, onReset, onBack }: Props) {
             </tbody>
           </table>
         </div>
-        <p className="small">Thicker borders mark the crossing-ten facts (like 13 − 7), which are the ones this game targets.</p>
+        <p className="small">Ringed cells are the crossing-ten facts (like 13 − 7), which this game targets most.</p>
       </section>
 
       <section className="panel">

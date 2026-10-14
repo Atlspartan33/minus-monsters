@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { MONSTERS, Monster, monsterById, type Mood } from '../monsters';
-import { sfx } from '../sound';
+import { sfx, warm } from '../sound';
 import { EGG_COST, eggReady, type Save } from '../store';
 import { Star } from './Play';
 
@@ -61,12 +61,24 @@ export function Home({ save, onPlay, onZoo, onParent, onHatch }: Props) {
             Hatch your egg!
           </button>
         ) : (
-          <button className="btn primary" onClick={onPlay}>
+          <button
+            className="btn primary"
+            onClick={() => {
+              warm();
+              onPlay();
+            }}
+          >
             Feed {m.name}
           </button>
         )}
         {ready && (
-          <button className="btn secondary" onClick={onPlay}>
+          <button
+            className="btn secondary"
+            onClick={() => {
+              warm();
+              onPlay();
+            }}
+          >
             Feed {m.name}
           </button>
         )}

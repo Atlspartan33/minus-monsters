@@ -106,3 +106,12 @@ export function speak(text: string) {
     /* no speech */
   }
 }
+
+// Create the AudioContext on a tap that isn't latency-sensitive, so the first keypad press isn't.
+export function warm() {
+  try {
+    ac();
+  } catch {
+    /* audio unavailable */
+  }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Problem } from './engine';
 import { Monster, type MonsterDef, type Mood } from './monsters';
-import { sfx } from './sound';
+import { sfx, speak } from './sound';
 
 // "Show me" — the monster eats the problem in front of her, then she counts what's left.
 // It demonstrates the strategy (make ten, break a ten) but never prints the answer.
@@ -80,7 +80,13 @@ export function HelpDemo({ p, m, onClose }: { p: Problem; m: MonsterDef; onClose
     const fast = p.boss ? 300 : 430;
     for (const act of script) {
       if (act.t === 'say') {
-        timers.push(window.setTimeout(() => alive && setCaption(act.text), t));
+        timers.push(
+          window.setTimeout(() => {
+            if (!alive) return;
+            setCaption(act.text);
+            speak(act.text);
+          }, t),
+        );
         t += 1300;
       } else if (act.t === 'eat') {
         timers.push(
@@ -114,6 +120,7 @@ export function HelpDemo({ p, m, onClose }: { p: Problem; m: MonsterDef; onClose
       window.setTimeout(() => {
         if (!alive) return;
         setCaption(end);
+        speak(end);
         setMood('happy');
         setDone(true);
       }, t + 300),
@@ -121,6 +128,7 @@ export function HelpDemo({ p, m, onClose }: { p: Problem; m: MonsterDef; onClose
     return () => {
       alive = false;
       timers.forEach(clearTimeout);
+      window.speechSynthesis?.cancel();
     };
   }, [p, run]);
 

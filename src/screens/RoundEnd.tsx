@@ -41,7 +41,7 @@ export function RoundEnd({ results, m, newFluent, eggReady, onHatch, onAgain, on
         {boss.length > 0 && (
           <li>
             <b>
-              {boss.filter((r) => r.at.firstTry).length}/{boss.length}
+              {boss.filter((r) => r.at.firstTry && !r.at.usedHelp).length}/{boss.length}
             </b>{' '}
             boss bites
           </li>
