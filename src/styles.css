@@ -1340,17 +1340,23 @@ button:disabled {
 .pace {
   margin: 0;
   color: var(--soft);
-  font-size: 1.05rem;
+  font-size: 1.3rem;
+  font-weight: 600;
 }
 .ghost {
   position: absolute;
+  z-index: 2;
   top: 0;
   bottom: 0;
-  width: 6px;
-  margin-left: -3px;
+  width: 10px;
+  margin-left: -5px;
   background: var(--pink);
-  border-radius: 3px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px var(--ink);
   transition: left 0.1s linear;
+}
+.progress-text {
+  z-index: 1;
 }
 .race {
   --rm: min(26dvh, 36vw, 280px);
@@ -1382,8 +1388,11 @@ button:disabled {
   padding-right: 10px;
   font-size: clamp(1.6rem, 3dvh, 2.4rem);
   border-radius: 99px 0 0 99px;
-  background: rgba(184, 242, 58, 0.16);
-  border-right: 3px dashed var(--lime);
+  background: rgba(184, 242, 58, 0.5);
+  border-right: 4px dashed var(--lime);
+}
+.speedy-zone .bolt {
+  animation: pulse 0.6s ease-in-out 5;
 }
 .cookie {
   position: absolute;
@@ -1405,7 +1414,7 @@ button:disabled {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 3px solid #8b5a20;
+  border: 3px solid #4a2511;
   background:
     radial-gradient(circle at 30% 32%, #4a2511 0 4px, transparent 5px),
     radial-gradient(circle at 66% 28%, #4a2511 0 3px, transparent 4px),
@@ -1463,7 +1472,19 @@ button:disabled {
   padding-bottom: 8px;
 }
 .keypad.compact .key {
-  height: clamp(52px, 7dvh, 84px);
+  height: clamp(56px, 7dvh, 84px);
+}
+/* Voice mode, portrait: keep the mic prompt right under the problem, centred as a group. */
+@media (orientation: portrait) {
+  .play.lightning.talking {
+    grid-template-rows: auto 1fr auto auto 1fr;
+  }
+  .play.lightning.talking .stage {
+    grid-row: 3;
+  }
+  .play.lightning.talking .pad-wrap {
+    grid-row: 4;
+  }
 }
 .end-time {
   display: flex;

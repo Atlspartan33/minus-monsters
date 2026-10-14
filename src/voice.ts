@@ -82,6 +82,7 @@ export function createListener(onHeard: (h: Heard) => void, onState: (s: 'listen
   let minIndex = 0;
 
   r.onresult = (e) => {
+    if (!want) return; // stopped: drop anything still in flight
     seen = e.results.length;
     for (let i = Math.max(e.resultIndex, minIndex); i < e.results.length; i++) {
       const res = e.results[i];

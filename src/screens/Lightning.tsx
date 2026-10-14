@@ -39,7 +39,12 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
   const [heard, setHeard] = useState('');
   const [mic, setMic] = useState<'off' | 'listening' | 'blocked'>('off');
   const [typing, setTyping] = useState(!voiceAvailable());
-  const [entry, setEntry] = useState('');
+  const [entry, setEntryState] = useState('');
+  const entryRef = useRef('');
+  const setEntry = (v: string | ((e: string) => string)) => {
+    entryRef.current = typeof v === 'function' ? v(entryRef.current) : v;
+    setEntryState(entryRef.current);
+  };
   const [snatch, setSnatch] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [stars, setStars] = useState(0);
@@ -198,7 +203,7 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
   const press = (k: string) => {
     if (g.current.busy) return;
     if (k === 'go') {
-      if (entry) resolve(parseInt(entry, 10), 'type');
+      if (entryRef.current) resolve(parseInt(entryRef.current, 10), 'type');
       setEntry('');
       return;
     }
@@ -292,7 +297,7 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
         {best && <p className="pace">{ghost !== null && idx / queue.length >= ghost ? 'You’re ahead of your best!' : 'Beat the pink line. That’s your best!'}</p>}
         <div className="race">
           <div className="track" aria-hidden="true">
-            <div className="speedy-zone" style={{ width: `${(VOICE_FAST_MS / ROLL_MS) * 100}%` }}>
+            <div className="speedy-zone" key={`z${idx}`} style={{ width: `${(VOICE_FAST_MS / ROLL_MS) * 100}%` }}>
               <Bolt />
             </div>
             <div className={`cookie ${snatch ? 'snatched' : ''}`} key={idx} style={{ animationDuration: `${ROLL_MS}ms` }}>
@@ -334,7 +339,15 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
               <span className="mic-dot" aria-hidden="true" />
               {mic === 'listening' ? 'Listening… say the answer!' : 'Starting the mic…'}
             </div>
-            <button className="help-btn" onClick={() => setTyping(true)}>
+            <button
+              className="help-btn"
+              onClick={() => {
+                listener.current?.stop();
+                listener.current = null;
+                setMic('off');
+                setTyping(true);
+              }}
+            >
               Type instead
             </button>
           </>
