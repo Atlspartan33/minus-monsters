@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FLUENT_BOX, buildRound, record, type Attempt, type Problem, type Stats } from './engine';
+import { FLUENT_BOX, buildLightning, buildRound, record, type Attempt, type Problem, type Stats } from './engine';
 import { Hatch } from './Hatch';
 import { monsterById } from './monsters';
 import { Home } from './screens/Home';
+import { Lightning } from './screens/Lightning';
 import { Parent } from './screens/Parent';
 import { Play, type Result } from './screens/Play';
 import { RoundEnd } from './screens/RoundEnd';
@@ -13,7 +14,8 @@ import { EGG_COST, eggReady, fresh, nextMonster, useSave } from './store';
 type Screen =
   | { k: 'home' }
   | { k: 'play'; round: Problem[]; before: Stats; id: number }
-  | { k: 'end'; results: Result[]; newFluent: string[] }
+  | { k: 'lightning'; round: Problem[]; before: Stats; id: number }
+  | { k: 'end'; results: Result[]; newFluent: string[]; mode: 'tap' | 'lightning'; time?: { ms: number; best: number | null; isNew: boolean } }
   | { k: 'zoo' }
   | { k: 'parent' };
 
@@ -34,6 +36,11 @@ export default function App() {
   const play = useCallback(() => {
     const s = latest.current;
     setScreen({ k: 'play', round: buildRound(s.stats, s.settings, s.bossWins), before: s.stats, id: Date.now() });
+  }, []);
+
+  const lightning = useCallback(() => {
+    const s = latest.current;
+    setScreen({ k: 'lightning', round: buildLightning(s.stats, s.settings), before: s.stats, id: Date.now() });
   }, []);
 
   const onAnswer = useCallback(
@@ -59,8 +66,11 @@ export default function App() {
   );
 
   const onFinish = useCallback(
-    (results: Result[]) => {
-      if (screen.k !== 'play') return;
+    (results: Result[], totalMs?: number) => {
+      if (screen.k !== 'play' && screen.k !== 'lightning') return;
+      const mode: 'tap' | 'lightning' = screen.k === 'lightning' ? 'lightning' : 'tap';
+      const prevBest = latest.current.lightning.best;
+      const isNew = mode === 'lightning' && totalMs !== undefined && (prevBest === null || totalMs < prevBest);
       const before = screen.before;
       const after = latest.current.stats;
       const newFluent = Object.keys(after)
@@ -79,10 +89,22 @@ export default function App() {
             helped: results.filter((r) => r.at.usedHelp).length,
             avgMs: facts.length ? Math.round(facts.reduce((t, r) => t + r.at.ms, 0) / facts.length) : 0,
             stars: results.reduce((t, r) => t + r.stars, 0),
+            mode,
+            totalMs: totalMs === undefined ? undefined : Math.round(totalMs),
           },
         ].slice(-200),
+        lightning:
+          mode === 'lightning'
+            ? { runs: s.lightning.runs + 1, best: isNew && totalMs !== undefined ? Math.round(totalMs) : s.lightning.best }
+            : s.lightning,
       }));
-      setScreen({ k: 'end', results, newFluent });
+      setScreen({
+        k: 'end',
+        results,
+        newFluent,
+        mode,
+        time: mode === 'lightning' && totalMs !== undefined ? { ms: totalMs, best: prevBest, isNew } : undefined,
+      });
     },
     [screen, setSave],
   );
@@ -103,7 +125,7 @@ export default function App() {
   return (
     <>
       {screen.k === 'home' && (
-        <Home save={save} onPlay={play} onZoo={() => setScreen({ k: 'zoo' })} onParent={() => setScreen({ k: 'parent' })} onHatch={startHatch} />
+        <Home save={save} onPlay={play} onLightning={lightning} onZoo={() => setScreen({ k: 'zoo' })} onParent={() => setScreen({ k: 'parent' })} onHatch={startHatch} />
       )}
       {screen.k === 'play' && (
         <Play
@@ -116,14 +138,26 @@ export default function App() {
           onQuit={() => setScreen({ k: 'home' })}
         />
       )}
+      {screen.k === 'lightning' && (
+        <Lightning
+          key={screen.id}
+          round={screen.round}
+          m={m}
+          best={save.lightning.best}
+          onAnswer={onAnswer}
+          onFinish={onFinish}
+          onQuit={() => setScreen({ k: 'home' })}
+        />
+      )}
       {screen.k === 'end' && (
         <RoundEnd
           results={screen.results}
           m={m}
           newFluent={screen.newFluent}
+          time={screen.time}
           eggReady={eggReady(save)}
           onHatch={startHatch}
-          onAgain={play}
+          onAgain={screen.mode === 'lightning' ? lightning : play}
           onHome={() => setScreen({ k: 'home' })}
         />
       )}

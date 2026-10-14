@@ -13,6 +13,8 @@ export interface RoundLog {
   helped: number;
   avgMs: number;
   stars: number;
+  mode?: 'tap' | 'lightning';
+  totalMs?: number;
 }
 
 export interface Save {
@@ -26,6 +28,7 @@ export interface Save {
   bossWins: number;
   rounds: RoundLog[];
   settings: Settings;
+  lightning: { best: number | null; runs: number };
 }
 
 export const fresh = (): Save => ({
@@ -38,6 +41,7 @@ export const fresh = (): Save => ({
   boss: { seen: 0, right: 0, borrowSeen: 0, borrowRight: 0 },
   bossWins: 0,
   rounds: [],
+  lightning: { best: null, runs: 0 },
   settings: { roundLen: 12, boss: 'auto', sound: true, readAloud: false },
 });
 
@@ -52,7 +56,7 @@ function load(): Save {
   try {
     const s = JSON.parse(raw) as Partial<Save>;
     const f = fresh();
-    return { ...f, ...s, settings: { ...f.settings, ...s.settings }, boss: { ...f.boss, ...s.boss } } as Save;
+    return { ...f, ...s, settings: { ...f.settings, ...s.settings }, boss: { ...f.boss, ...s.boss }, lightning: { ...f.lightning, ...s.lightning } } as Save;
   } catch {
     // Never overwrite a save we can't read — park it so it can be recovered.
     try {

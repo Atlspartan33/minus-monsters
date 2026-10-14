@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FLUENT_BOX, TIER_INFO, keyOf, tierFluency, tierOf, type BossMode, type Settings, type Tier } from '../engine';
 import type { Save } from '../store';
+import { fmtTime } from './Lightning';
 
 interface Props {
   save: Save;
@@ -156,6 +157,7 @@ export function Parent({ save, onSettings, onReset, onBack }: Props) {
             <thead>
               <tr>
                 <th>When</th>
+                <th>Mode</th>
                 <th>First try</th>
                 <th>Speedy</th>
                 <th>Avg time</th>
@@ -168,6 +170,7 @@ export function Parent({ save, onSettings, onReset, onBack }: Props) {
                 .map((r) => (
                   <tr key={r.at}>
                     <td>{new Date(r.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                    <td>{r.mode === 'lightning' ? `Lightning ${r.totalMs ? fmtTime(r.totalMs) : ''}` : 'Tap'}</td>
                     <td>
                       {r.firstTry}/{r.n}
                     </td>

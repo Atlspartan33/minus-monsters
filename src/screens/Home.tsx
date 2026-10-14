@@ -2,17 +2,19 @@ import { useRef, useState } from 'react';
 import { MONSTERS, Monster, monsterById, type Mood } from '../monsters';
 import { sfx, warm } from '../sound';
 import { EGG_COST, eggReady, type Save } from '../store';
+import { Bolt, fmtTime } from './Lightning';
 import { Star } from './Play';
 
 interface Props {
   save: Save;
   onPlay: () => void;
+  onLightning: () => void;
   onZoo: () => void;
   onParent: () => void;
   onHatch: () => void;
 }
 
-export function Home({ save, onPlay, onZoo, onParent, onHatch }: Props) {
+export function Home({ save, onPlay, onLightning, onZoo, onParent, onHatch }: Props) {
   const m = monsterById(save.current);
   const [mood, setMood] = useState<Mood>('idle');
   const [hold, setHold] = useState(false);
@@ -99,6 +101,17 @@ export function Home({ save, onPlay, onZoo, onParent, onHatch }: Props) {
             </>
           )}
         </div>
+
+        <button
+          className="btn lightning-btn"
+          onClick={() => {
+            warm();
+            onLightning();
+          }}
+        >
+          <Bolt /> Lightning Round
+          <span className="btn-sub">{save.lightning.best ? `Best ${fmtTime(save.lightning.best)}` : 'Say it fast!'}</span>
+        </button>
 
         <button className="btn secondary" onClick={onZoo}>
           Monster Zoo · {save.owned.length}/{MONSTERS.length}

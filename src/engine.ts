@@ -161,10 +161,20 @@ export interface Attempt {
   firstTry: boolean;
   usedHelp: boolean;
   ms: number;
+  /** Spoken answer: ms runs to when she started talking, so there's no typing time in it. */
+  voice?: boolean;
 }
 
+export const VOICE_FAST_MS = 3000;
+
 export const isSpeedy = (p: Problem, at: Attempt) =>
-  at.firstTry && !at.usedHelp && at.ms <= FAST_MS * (p.boss ? 3 : p.kind === 'missing' ? 1.5 : 1);
+  at.firstTry && !at.usedHelp && at.ms <= (at.voice ? VOICE_FAST_MS : FAST_MS * (p.boss ? 3 : p.kind === 'missing' ? 1.5 : 1));
+
+/** Lightning Round: basic facts only, all "a − b = ?" so they're easy to say. */
+export function buildLightning(stats: Stats, settings: Settings, rng = Math.random): Problem[] {
+  return buildRound(stats, { ...settings, roundLen: LIGHTNING_LEN, boss: 'off' }, 0, rng).map((p) => make(p.a, p.b));
+}
+export const LIGHTNING_LEN = 15;
 
 export function record(stats: Stats, p: Problem, at: Attempt): Stats {
   const prev = stats[p.key] ?? { seen: 0, right: 0, fast: 0, box: 0, misses: 0, lastMs: 0, lastAt: 0 };

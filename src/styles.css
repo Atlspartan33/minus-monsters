@@ -1264,3 +1264,228 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- lightning round ---------- */
+.bolt {
+  vertical-align: -0.12em;
+}
+.lightning-btn {
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  background: rgba(255, 210, 63, 0.14);
+  border: 2px solid var(--sun);
+  color: #fff;
+}
+.btn-sub {
+  flex-basis: 100%;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--soft);
+}
+.lightning.ready {
+  max-width: 760px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding: max(14px, env(safe-area-inset-top)) 16px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.bolt-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ready-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  --mon: min(34dvh, 64vw, 380px);
+}
+.ready-line {
+  margin: 0;
+  font-size: clamp(1.3rem, 3dvh, 1.8rem);
+  font-weight: 600;
+  max-width: 520px;
+}
+.ready-best {
+  margin: 0;
+  color: var(--sun);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.ready-note {
+  margin: 0;
+  max-width: 460px;
+  color: var(--soft);
+  font-size: 1.05rem;
+}
+.ready-actions {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.countdown {
+  font-size: clamp(8rem, 30dvh, 16rem);
+  font-weight: 700;
+  color: var(--sun);
+  line-height: 1;
+  animation: popin 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.pace {
+  margin: 0;
+  color: var(--soft);
+  font-size: 1.05rem;
+}
+.ghost {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  margin-left: -3px;
+  background: var(--pink);
+  border-radius: 3px;
+  transition: left 0.1s linear;
+}
+.race {
+  --rm: min(26dvh, 36vw, 280px);
+  --ck: clamp(52px, 6.2dvh, 84px);
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+.race-monster .monster {
+  width: var(--rm);
+}
+.track {
+  position: relative;
+  flex: 1;
+  height: calc(var(--ck) + 14px);
+  margin-top: calc(var(--rm) * 1.14 * 0.67 - (var(--ck) + 14px) / 2);
+  margin-right: calc(var(--rm) * -0.3);
+  border-radius: 99px 0 0 99px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.speedy-zone {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  font-size: clamp(1.6rem, 3dvh, 2.4rem);
+  border-radius: 99px 0 0 99px;
+  background: rgba(184, 242, 58, 0.16);
+  border-right: 3px dashed var(--lime);
+}
+.cookie {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--ck);
+  height: var(--ck);
+  margin-top: calc(var(--ck) / -2);
+  z-index: 3;
+  animation-name: roll;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  transition:
+    transform 0.3s ease-in,
+    opacity 0.3s ease-in;
+}
+.cookie-spin {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid #8b5a20;
+  background:
+    radial-gradient(circle at 30% 32%, #4a2511 0 4px, transparent 5px),
+    radial-gradient(circle at 66% 28%, #4a2511 0 3px, transparent 4px),
+    radial-gradient(circle at 55% 62%, #4a2511 0 4px, transparent 5px),
+    radial-gradient(circle at 26% 70%, #4a2511 0 3px, transparent 4px),
+    radial-gradient(circle at 40% 35%, #f0b467, #d08a3e);
+  animation-name: spin;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.cookie.snatched,
+.cookie.snatched .cookie-spin {
+  animation-play-state: paused;
+}
+.cookie.snatched {
+  transform: translateX(70px) scale(0.2);
+  opacity: 0;
+}
+@keyframes roll {
+  to {
+    left: calc(100% - var(--ck));
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(720deg);
+  }
+}
+.heard {
+  color: var(--soft);
+  font-size: 1.2rem;
+}
+.mic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 24px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: clamp(1.15rem, 2.6dvh, 1.5rem);
+  font-weight: 600;
+}
+.mic-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #8a7fae;
+}
+.mic.listening .mic-dot {
+  background: #ff4d6d;
+  animation: glow 1s ease-in-out infinite;
+}
+.lightning.talking .pad-wrap {
+  padding-bottom: 8px;
+}
+.keypad.compact .key {
+  height: clamp(52px, 7dvh, 84px);
+}
+.end-time {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: clamp(2rem, 4.6dvh, 3rem);
+  font-weight: 700;
+  color: var(--sun);
+}
+.end-time span {
+  flex-basis: 100%;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--soft);
+}
+.end-time.record {
+  animation: pulse 1s ease-in-out 3;
+}
+@media (orientation: landscape) and (min-width: 700px) {
+  .race {
+    --rm: min(30dvh, 22vw, 260px);
+  }
+}

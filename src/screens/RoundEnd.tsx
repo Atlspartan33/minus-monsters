@@ -1,17 +1,19 @@
 import { Monster, type MonsterDef } from '../monsters';
+import { Bolt, fmtTime } from './Lightning';
 import { Star, type Result } from './Play';
 
 interface Props {
   results: Result[];
   m: MonsterDef;
   newFluent: string[];
+  time?: { ms: number; best: number | null; isNew: boolean };
   eggReady: boolean;
   onHatch: () => void;
   onAgain: () => void;
   onHome: () => void;
 }
 
-export function RoundEnd({ results, m, newFluent, eggReady, onHatch, onAgain, onHome }: Props) {
+export function RoundEnd({ results, m, newFluent, time, eggReady, onHatch, onAgain, onHome }: Props) {
   const stars = results.reduce((s, r) => s + r.stars, 0);
   const first = results.filter((r) => r.at.firstTry && !r.at.usedHelp).length;
   const speedy = results.filter((r) => r.speedy).length;
@@ -25,7 +27,13 @@ export function RoundEnd({ results, m, newFluent, eggReady, onHatch, onAgain, on
           <Monster m={m} mood="happy" />
         </div>
       </div>
-      <h2 className="end-title">{m.name} is stuffed!</h2>
+      <h2 className="end-title">{time?.isNew ? 'NEW RECORD!' : `${m.name} is stuffed!`}</h2>
+      {time && (
+        <div className={`end-time ${time.isNew ? 'record' : ''}`}>
+          <Bolt /> {fmtTime(time.ms)}
+          <span>{time.isNew ? (time.best ? `Old best ${fmtTime(time.best)}` : 'Your first record!') : `Best ${fmtTime(time.best ?? time.ms)}`}</span>
+        </div>
+      )}
 
       <div className="end-stars" aria-label={`${stars} stars earned`}>
         <Star size={40} /> +{stars}
