@@ -4,6 +4,7 @@ import '@fontsource/fredoka/500.css';
 import '@fontsource/fredoka/600.css';
 import '@fontsource/fredoka/700.css';
 import './styles.css';
+import './motion.css';
 import App from './App';
 
 createRoot(document.getElementById('root')!).render(
@@ -16,6 +17,18 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     const hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+    // The bundle loaded before the worker existed; cache it now so the very first offline open works.
+    navigator.serviceWorker.ready
+      .then(() => caches.open('minus-monsters-v1'))
+      .then((c) =>
+        c.addAll(
+          performance
+            .getEntriesByType('resource')
+            .map((e) => e.name)
+            .filter((u) => u.startsWith(location.origin)),
+        ),
+      )
+      .catch(() => {});
     // A redeploy takes over immediately; reload so an installed app isn't a version behind.
     let reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {

@@ -83,6 +83,26 @@ export const sfx = {
   },
   boing: () => tone(220, 0.35, 'sine', 0.16, 0, 660),
   hatch: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.16, 'triangle', 0.13, i * 0.09)),
+  walk: () => [0, 0.18, 0.36, 0.54, 0.72].forEach((t, i) => tone(i % 2 ? 330 : 392, 0.08, 'triangle', 0.08, t)),
+  whoosh: () => noise(0.28, 0.22, 0, 2400),
+  bossIntro: () => {
+    [0, 0.22, 0.44].forEach((t) => {
+      tone(70, 0.3, 'sine', 0.35, t, 45);
+      noise(0.12, 0.3, t, 300);
+    });
+    tone(220, 0.5, 'sawtooth', 0.07, 0.66, 330);
+  },
+  bossWin: () => {
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.14, 'square', 0.07, 0.3 + i * 0.08));
+    tone(1047, 0.5, 'triangle', 0.14, 0.62);
+    tone(1319, 0.5, 'triangle', 0.1, 0.62);
+    noise(0.4, 0.2, 0.3, 5000);
+  },
+  chest: () => {
+    tone(200, 0.12, 'square', 0.08, 0, 160);
+    [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(f, 0.18, 'sine', 0.1, 0.18 + i * 0.07));
+  },
+  sparkle: () => [1568, 2093, 2637].forEach((f, i) => tone(f, 0.12, 'sine', 0.05, i * 0.05)),
   crack: () => noise(0.1, 0.5, 0, 3000),
   nibble: () => noise(0.05, 0.35, 0, 1500),
   break: () => {

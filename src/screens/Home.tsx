@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MONSTERS, Monster, monsterById, type Mood } from '../monsters';
 import { sfx, warm } from '../sound';
-import { EGG_COST, eggReady, type Save } from '../store';
+import { pendingPrizes, type Save } from '../store';
+import { Trail } from '../Trail';
 import { Bolt, fmtTime } from './Lightning';
 import { Star } from './Play';
 
@@ -10,22 +11,38 @@ interface Props {
   onPlay: () => void;
   onLightning: () => void;
   onZoo: () => void;
+  onDressUp: () => void;
   onParent: () => void;
-  onHatch: () => void;
+  onPrize: () => void;
 }
 
-export function Home({ save, onPlay, onLightning, onZoo, onParent, onHatch }: Props) {
+const POKES = ['Hee hee! That tickles!', 'Hey! Feed me instead!', 'Boop!', 'I’m SO hungry…', 'Numbers, please!', 'Is it snack time?'];
+
+export function Home({ save, onPlay, onLightning, onZoo, onDressUp, onParent, onPrize }: Props) {
   const m = monsterById(save.current);
+  const outfit = save.outfits[m.id];
   const [mood, setMood] = useState<Mood>('idle');
+  const [gaze, setGaze] = useState<[number, number]>([0, 0]);
+  const [line, setLine] = useState(m.line);
   const [hold, setHold] = useState(false);
   const holdTimer = useRef<number | undefined>(undefined);
-  const ready = eggReady(save);
-  const allFound = save.owned.length >= MONSTERS.length;
+  const prizes = pendingPrizes(save);
+  const best = save.lightning.bests[String(save.settings.lightningLen)];
+
+  // Eyes wander so the monster feels alive.
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      setGaze([Math.round((Math.random() * 2 - 1) * 10) / 10, Math.round((Math.random() * 1.4 - 0.5) * 10) / 10]);
+    }, 2200);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => setLine(m.line), [m.line]);
 
   const poke = () => {
     sfx.boing();
     setMood('happy');
-    window.setTimeout(() => setMood('idle'), 700);
+    setLine(POKES[Math.floor(Math.random() * POKES.length)]);
+    window.setTimeout(() => setMood('idle'), 800);
   };
   const startHold = () => {
     setHold(true);
@@ -38,84 +55,67 @@ export function Home({ save, onPlay, onLightning, onZoo, onParent, onHatch }: Pr
     setHold(false);
     window.clearTimeout(holdTimer.current);
   };
+  const go = (fn: () => void) => () => {
+    warm();
+    fn();
+  };
 
   return (
     <main className="home">
-      <h1 className="wordmark" aria-label="Minus Monsters">
-        <span>MINUS</span>
-        <span className="minus-bar" aria-hidden="true" />
-        <span>MONSTERS</span>
-      </h1>
+      <header className="home-top">
+        <h1 className="wordmark" aria-label="Minus Monsters">
+          <span>MINUS</span>
+          <span className="minus-bar" aria-hidden="true" />
+          <span>MONSTERS</span>
+        </h1>
+        <div className="star-chip" aria-label={`${save.stars} stars`}>
+          <Star size={24} /> {save.stars}
+        </div>
+      </header>
 
       <div className="home-hero">
-        <div className="bubble">{m.line}</div>
+        <div className="bubble" key={line}>
+          {line}
+        </div>
         <button className={`monster-wrap hero mood-${mood}`} onClick={poke} aria-label={`Poke ${m.name}`}>
+          <div className="hero-glow" aria-hidden="true" />
           <div className="monster big">
-            <Monster m={m} mood={mood} />
+            <Monster m={m} mood={mood} outfit={outfit} gaze={gaze} />
           </div>
         </button>
         <div className="hero-name">{m.name}</div>
       </div>
 
       <div className="home-actions">
-        {ready ? (
-          <button className="btn primary pulse" onClick={onHatch}>
-            Hatch your egg!
+        {prizes > 0 ? (
+          <button className="btn primary pulse" onClick={go(onPrize)}>
+            Open your prize!{prizes > 1 ? ` (${prizes})` : ''}
           </button>
         ) : (
-          <button
-            className="btn primary"
-            onClick={() => {
-              warm();
-              onPlay();
-            }}
-          >
+          <button className="btn primary" onClick={go(onPlay)}>
             Feed {m.name}
           </button>
         )}
-        {ready && (
-          <button
-            className="btn secondary"
-            onClick={() => {
-              warm();
-              onPlay();
-            }}
-          >
+        {prizes > 0 && (
+          <button className="btn secondary" onClick={go(onPlay)}>
             Feed {m.name}
           </button>
         )}
-
-        <div className="egg-meter" aria-label={allFound ? 'All monsters found' : `${Math.min(save.egg, EGG_COST)} of ${EGG_COST} stars to the next egg`}>
-          {allFound ? (
-            <span className="egg-text">
-              <Star /> {save.stars} stars · every monster found!
-            </span>
-          ) : (
-            <>
-              <div className="egg-bar">
-                <div className="egg-fill" style={{ width: `${Math.min(100, (save.egg / EGG_COST) * 100)}%` }} />
-              </div>
-              <span className="egg-text">
-                <Star /> {Math.min(save.egg, EGG_COST)} / {EGG_COST} to the next egg
-              </span>
-            </>
-          )}
-        </div>
-
-        <button
-          className="btn lightning-btn"
-          onClick={() => {
-            warm();
-            onLightning();
-          }}
-        >
+        <button className="btn lightning-btn" onClick={go(onLightning)}>
           <Bolt /> Lightning Round
-          <span className="btn-sub">{save.lightning.best ? `Best ${fmtTime(save.lightning.best)}` : 'Say it fast!'}</span>
+          <span className="btn-sub">{best ? `Best ${fmtTime(best)} for ${save.settings.lightningLen}` : 'Say it fast!'}</span>
         </button>
 
-        <button className="btn secondary" onClick={onZoo}>
-          Monster Zoo · {save.owned.length}/{MONSTERS.length}
-        </button>
+        <Trail save={save} m={m} outfit={outfit} compact />
+
+        <div className="home-row">
+          <button className="btn secondary" onClick={onZoo}>
+            Zoo · {save.owned.length}/{MONSTERS.length}
+          </button>
+          <button className="btn secondary" onClick={onDressUp}>
+            Dress up
+          </button>
+        </div>
       </div>
 
       <button

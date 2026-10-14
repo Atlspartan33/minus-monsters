@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Outfit } from '../accessories';
+import { LIGHTNING_LENGTHS } from '../store';
 import { VOICE_FAST_MS, isSpeedy, type Attempt, type Problem } from '../engine';
 import { Monster, type MonsterDef, type Mood } from '../monsters';
 import { sfx, warm } from '../sound';
@@ -14,7 +16,9 @@ const ROLL_MS = 5000;
 interface Props {
   round: Problem[];
   m: MonsterDef;
-  best: number | null;
+  outfit?: Outfit;
+  bests: Record<string, number>;
+  onLen: (n: number) => void;
   onAnswer: (p: Problem, at: Attempt, stars: number) => void;
   onFinish: (results: Result[], totalMs: number) => void;
   onQuit: () => void;
@@ -28,7 +32,8 @@ export const fmtTime = (ms: number) => {
   return `${m}:${(s - m * 60).toFixed(1).padStart(4, '0')}`;
 };
 
-export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props) {
+export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, onQuit }: Props) {
+  const best = bests[String(round.length)] ?? null;
   const problem = voiceProblem();
   const [phase, setPhase] = useState<'ready' | 'count' | 'go'>('ready');
   const [count, setCount] = useState(3);
@@ -109,6 +114,7 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
         s.results.push({ p, at, speedy, stars: st });
         onAnswer(p, at, st);
         setStars((x) => x + st);
+        setEntry(String(val));
         setSnatch(true);
         setMood('chomp');
         sfx.chomp();
@@ -144,12 +150,16 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
     (h: Heard) => {
       const s = g.current;
       if (s.busy || s.done) return;
-      if (h.text.trim() && !s.firstHeardAt) s.firstHeardAt = performance.now();
       setHeard(h.text);
       const p = s.queue[s.idx];
-      // Reading the problem out loud ("thirteen minus seven") isn't an answer.
-      const readingIt = (nums: number[]) => nums.length >= 2 && nums[nums.length - 2] === p.a && nums[nums.length - 1] === p.b;
-      if (h.alts.some((nums) => nums.length > 0 && nums[nums.length - 1] === p.answer && !readingIt(nums))) {
+      // Interim results are guesses: trust only the top one until it's final.
+      const alts = h.final ? h.alts : h.alts.slice(0, 1);
+      // The clock stops when she starts saying a number, not at any noise (TJ, the TV).
+      if (!s.firstHeardAt && alts.some((n) => n.length > 0)) s.firstHeardAt = performance.now();
+      // Reading the problem out loud ("thirteen minus seven", or a pause after "thirteen") isn't an answer.
+      const readingIt = (nums: number[]) =>
+        (nums.length >= 2 && nums[nums.length - 2] === p.a && nums[nums.length - 1] === p.b) || (nums.length === 1 && nums[0] === p.a);
+      if (alts.some((nums) => nums.length > 0 && nums[nums.length - 1] === p.answer && !readingIt(nums))) {
         resolve(p.answer, 'voice');
         return;
       }
@@ -172,10 +182,14 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
     listener.current = createListener(
       (h) => heardRef.current(h),
       (st) => {
-        if (st === 'blocked') {
+        if (st === 'blocked' || st === 'offline') {
+          listener.current = null;
           setMic('blocked');
           setTyping(true);
-          setFlash({ text: 'The mic is off. Type your answers instead!', tone: 'soft' });
+          setFlash({
+            text: st === 'offline' ? 'The mic needs internet. Type your answers instead!' : 'The mic is off. Type your answers instead!',
+            tone: 'soft',
+          });
         } else setMic(st === 'listening' ? 'listening' : 'off');
       },
     );
@@ -247,13 +261,33 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
             <>
               <div className="monster-wrap mood-idle">
                 <div className="monster big">
-                  <Monster m={m} mood="open" />
+                  <Monster m={m} mood="open" outfit={outfit} />
+                </div>
+              </div>
+              <div className="len-pick">
+                <span className="len-label">How many problems?</span>
+                <div className="seg len-seg" role="radiogroup" aria-label="How many problems">
+                  {LIGHTNING_LENGTHS.map((n) => (
+                    <button
+                      key={n}
+                      role="radio"
+                      aria-checked={round.length === n}
+                      aria-pressed={round.length === n}
+                      onClick={() => {
+                        sfx.key();
+                        onLen(n);
+                      }}
+                    >
+                      <b>{n}</b>
+                      <small>{bests[String(n)] ? fmtTime(bests[String(n)]) : 'no record'}</small>
+                    </button>
+                  ))}
                 </div>
               </div>
               <p className="ready-line">
                 {typing ? 'Type each answer fast.' : 'Say each answer out loud.'} Beat the cookie to {m.name}’s mouth!
               </p>
-              <p className="ready-best">{best ? `Your best: ${fmtTime(best)}` : `${round.length} problems. Set your first record!`}</p>
+              <p className="ready-best">{best ? `Your best for ${round.length}: ${fmtTime(best)}` : `${round.length} problems. Set your first record!`}</p>
               {problem && <p className="ready-note">{problem} You can still race by typing.</p>}
               <div className="ready-actions">
                 <button className="btn primary" onClick={start}>
@@ -306,18 +340,34 @@ export function Lightning({ round, m, best, onAnswer, onFinish, onQuit }: Props)
           </div>
           <div className={`monster-wrap mood-${mood} race-monster`}>
             <div className="monster">
-              <Monster m={m} mood={mood} />
+              <Monster m={m} mood={mood} outfit={outfit} gaze={snatch ? [0, 0] : [-0.8, 0.3]} />
             </div>
           </div>
         </div>
 
         <div className="card" key={idx}>
           <div className="eq" aria-live="polite">
-            <span>{p.a}</span>
-            <span className="op">−</span>
-            <span>{p.b}</span>
-            <span className="op">=</span>
-            <span className={`answer ${entry ? 'filled' : ''}`}>{typing ? entry || '?' : '?'}</span>
+            {[
+              <span key="a">{p.a}</span>,
+              <span key="o" className="op">−</span>,
+              <span key="b">{p.b}</span>,
+              <span key="e" className="op">=</span>,
+              <span key="x" className={`answer ${entry ? 'filled' : ''} ${snatch ? 'taken' : ''}`}>
+                {entry ? (
+                  entry.split('').map((d, i) => (
+                    <span className="digit" key={`${i}-${d}`}>
+                      {d}
+                    </span>
+                  ))
+                ) : (
+                  <span className="qmark">?</span>
+                )}
+              </span>,
+            ].map((el, i) => (
+              <span className="num-in" key={`${idx}-${i}`} style={{ ['--i' as string]: i }}>
+                {el}
+              </span>
+            ))}
           </div>
         </div>
 

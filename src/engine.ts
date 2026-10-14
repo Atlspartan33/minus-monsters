@@ -35,6 +35,7 @@ export interface Settings {
   boss: BossMode;
   sound: boolean;
   readAloud: boolean;
+  lightningLen: number;
 }
 
 export const FAST_MS = 4000;
@@ -85,6 +86,7 @@ function weightOf(stats: Stats, a: number, b: number) {
 }
 
 function weightedPick<T>(items: T[], w: (x: T) => number, rng: () => number): T {
+  if (items.length === 0) throw new Error('weightedPick: empty pool');
   const ws = items.map(w);
   let r = rng() * ws.reduce((s, x) => s + x, 0);
   for (let i = 0; i < items.length; i++) {
@@ -135,13 +137,16 @@ export function buildRound(stats: Stats, settings: Settings, bossWins: number, r
     const s = stats[keyOf(a, b)];
     return s ? s.box >= FLUENT_BOX : tierOf(a, b) === 1 && a - b > 1;
   });
-  for (let i = 0; i < 2 && easy.length; i++) {
-    const [a, b] = weightedPick(easy.filter(([x, y]) => !used.has(keyOf(x, y))), () => 1, rng);
+  for (let i = 0; i < 2; i++) {
+    const left = easy.filter(([x, y]) => !used.has(keyOf(x, y)));
+    if (!left.length) break;
+    const [a, b] = weightedPick(left, () => 1, rng);
     used.add(keyOf(a, b));
     out.push(make(a, b));
   }
   while (out.length < regular) {
     const pool = FACT_POOL.filter(([a, b]) => !used.has(keyOf(a, b)));
+    if (!pool.length) break;
     const [a, b] = weightedPick(pool, ([x, y]) => weightOf(stats, x, y), rng);
     used.add(keyOf(a, b));
     out.push(make(a, b, kindFor(a, b)));
@@ -172,14 +177,18 @@ export const isSpeedy = (p: Problem, at: Attempt) =>
 
 /** Lightning Round: basic facts only, all "a − b = ?" so they're easy to say. */
 export function buildLightning(stats: Stats, settings: Settings, rng = Math.random): Problem[] {
-  return buildRound(stats, { ...settings, roundLen: LIGHTNING_LEN, boss: 'off' }, 0, rng).map((p) => make(p.a, p.b));
+  const n = Math.min(40, Math.max(5, settings.lightningLen || 15));
+  return buildRound(stats, { ...settings, roundLen: n, boss: 'off' }, 0, rng).map((p) => make(p.a, p.b));
 }
-export const LIGHTNING_LEN = 15;
 
 export function record(stats: Stats, p: Problem, at: Attempt): Stats {
   const prev = stats[p.key] ?? { seen: 0, right: 0, fast: 0, box: 0, misses: 0, lastMs: 0, lastAt: 0 };
   const s = { ...prev, seen: prev.seen + 1, lastMs: at.ms, lastAt: Date.now() };
-  if (at.firstTry && !at.usedHelp) {
+  if (at.firstTry && !at.usedHelp && p.comeback) {
+    // Right after seeing it moments ago: good, but not proof it's in long-term memory.
+    s.right++;
+    s.box = Math.max(s.box, 1);
+  } else if (at.firstTry && !at.usedHelp) {
     s.right++;
     if (isSpeedy(p, at)) {
       s.fast++;

@@ -33,12 +33,16 @@ const WORDS: Record<string, number> = {
   twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
 };
 
+// Sound-alikes only count when they're the whole utterance ("ate!"), not inside a sentence ("I ate it").
+const HOMOPHONES = new Set(['won', 'to', 'too', 'tree', 'free', 'for', 'fore', 'sicks', 'sics', 'sex', 'ate', 'nein', 'tin']);
+
 export function parseNumbers(text: string): number[] {
   const tokens = text.toLowerCase().replace(/-/g, ' ').match(/[a-z]+|\d+/g) ?? [];
+  const alone = tokens.length === 1;
   const out: number[] = [];
   let pend: number | null = null;
   for (const t of tokens) {
-    const v = /^\d+$/.test(t) ? Number(t) : WORDS[t];
+    const v = /^\d+$/.test(t) ? Number(t) : HOMOPHONES.has(t) && !alone ? undefined : WORDS[t];
     if (v === undefined) {
       if (pend !== null) out.push(pend);
       pend = null;
@@ -69,7 +73,10 @@ export interface Listener {
   mark(): void;
 }
 
-export function createListener(onHeard: (h: Heard) => void, onState: (s: 'listening' | 'idle' | 'blocked') => void): Listener | null {
+export function createListener(
+  onHeard: (h: Heard) => void,
+  onState: (s: 'listening' | 'idle' | 'blocked' | 'offline') => void,
+): Listener | null {
   const C = ctor();
   if (!C || !window.isSecureContext) return null;
   const r = new C();
@@ -80,6 +87,7 @@ export function createListener(onHeard: (h: Heard) => void, onState: (s: 'listen
   let want = false;
   let seen = 0;
   let minIndex = 0;
+  let restarts: number[] = [];
 
   r.onresult = (e) => {
     if (!want) return; // stopped: drop anything still in flight
@@ -97,6 +105,14 @@ export function createListener(onHeard: (h: Heard) => void, onState: (s: 'listen
     seen = 0;
     minIndex = 0;
     if (want) {
+      // Don't spin if the recognizer keeps dying (no network, busy mic).
+      const now = Date.now();
+      restarts = [...restarts.filter((t) => now - t < 3000), now];
+      if (restarts.length > 4) {
+        want = false;
+        onState('offline');
+        return;
+      }
       try {
         r.start();
       } catch {
@@ -108,6 +124,9 @@ export function createListener(onHeard: (h: Heard) => void, onState: (s: 'listen
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
       want = false;
       onState('blocked');
+    } else if (e.error === 'network' || e.error === 'language-not-supported') {
+      want = false;
+      onState('offline');
     }
   };
 

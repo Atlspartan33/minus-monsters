@@ -1,28 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Slot } from './accessories';
 import { FLUENT_BOX, buildLightning, buildRound, record, type Attempt, type Problem, type Stats } from './engine';
-import { Hatch } from './Hatch';
 import { monsterById } from './monsters';
+import { PrizeReveal } from './Prize';
 import { Home } from './screens/Home';
 import { Lightning } from './screens/Lightning';
 import { Parent } from './screens/Parent';
 import { Play, type Result } from './screens/Play';
 import { RoundEnd } from './screens/RoundEnd';
+import { Wardrobe } from './screens/Wardrobe';
 import { Zoo } from './screens/Zoo';
 import { setSound } from './sound';
-import { EGG_COST, eggReady, fresh, nextMonster, useSave } from './store';
+import { claimPrize, fresh, pendingPrizes, useSave, type Prize } from './store';
 
+type Run = { round: Problem[]; before: Stats; starsBefore: number; id: number };
 type Screen =
   | { k: 'home' }
-  | { k: 'play'; round: Problem[]; before: Stats; id: number }
-  | { k: 'lightning'; round: Problem[]; before: Stats; id: number }
-  | { k: 'end'; results: Result[]; newFluent: string[]; mode: 'tap' | 'lightning'; time?: { ms: number; best: number | null; isNew: boolean } }
+  | ({ k: 'play' } & Run)
+  | ({ k: 'lightning' } & Run)
+  | {
+      k: 'end';
+      results: Result[];
+      newFluent: string[];
+      mode: 'tap' | 'lightning';
+      starsBefore: number;
+      time?: { ms: number; best: number | null; isNew: boolean };
+    }
   | { k: 'zoo' }
+  | { k: 'wardrobe'; id: string; back: 'home' | 'zoo' }
   | { k: 'parent' };
 
 export default function App() {
   const [save, setSave] = useSave();
   const [screen, setScreen] = useState<Screen>({ k: 'home' });
-  const [hatching, setHatching] = useState<string | null>(null);
+  const [prize, setPrize] = useState<Prize | null>(null);
   const latest = useRef(save);
   latest.current = save;
 
@@ -33,21 +44,26 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [screen.k]);
 
+  const run = (s = latest.current) => ({ before: s.stats, starsBefore: s.stars, id: Date.now() });
   const play = useCallback(() => {
     const s = latest.current;
-    setScreen({ k: 'play', round: buildRound(s.stats, s.settings, s.bossWins), before: s.stats, id: Date.now() });
+    setScreen({ k: 'play', round: buildRound(s.stats, s.settings, s.bossWins), ...run(s) });
   }, []);
-
   const lightning = useCallback(() => {
     const s = latest.current;
-    setScreen({ k: 'lightning', round: buildLightning(s.stats, s.settings), before: s.stats, id: Date.now() });
+    setScreen({ k: 'lightning', round: buildLightning(s.stats, s.settings), ...run(s) });
   }, []);
+  const setLightningLen = (n: number) => {
+    const s = { ...latest.current, settings: { ...latest.current.settings, lightningLen: n } };
+    setSave(s);
+    setScreen({ k: 'lightning', round: buildLightning(s.stats, s.settings), ...run(s) });
+  };
 
   const onAnswer = useCallback(
     (p: Problem, at: Attempt, stars: number) => {
       setSave((s) => {
         const clean = at.firstTry && !at.usedHelp;
-        const next = { ...s, stars: s.stars + stars, egg: s.egg + stars };
+        const next = { ...s, stars: s.stars + stars };
         if (!p.boss) return { ...next, stats: record(s.stats, p, at) };
         const borrow = p.tier === 5;
         return {
@@ -69,7 +85,8 @@ export default function App() {
     (results: Result[], totalMs?: number) => {
       if (screen.k !== 'play' && screen.k !== 'lightning') return;
       const mode: 'tap' | 'lightning' = screen.k === 'lightning' ? 'lightning' : 'tap';
-      const prevBest = latest.current.lightning.best;
+      const key = String(screen.round.length);
+      const prevBest = latest.current.lightning.bests[key] ?? null;
       const isNew = mode === 'lightning' && totalMs !== undefined && (prevBest === null || totalMs < prevBest);
       const before = screen.before;
       const after = latest.current.stats;
@@ -95,7 +112,10 @@ export default function App() {
         ].slice(-200),
         lightning:
           mode === 'lightning'
-            ? { runs: s.lightning.runs + 1, best: isNew && totalMs !== undefined ? Math.round(totalMs) : s.lightning.best }
+            ? {
+                runs: s.lightning.runs + 1,
+                bests: isNew && totalMs !== undefined ? { ...s.lightning.bests, [key]: Math.round(totalMs) } : s.lightning.bests,
+              }
             : s.lightning,
       }));
       setScreen({
@@ -103,76 +123,140 @@ export default function App() {
         results,
         newFluent,
         mode,
+        starsBefore: screen.starsBefore,
         time: mode === 'lightning' && totalMs !== undefined ? { ms: totalMs, best: prevBest, isNew } : undefined,
       });
     },
     [screen, setSave],
   );
 
-  const startHatch = () => {
-    const n = nextMonster(latest.current);
-    if (n && eggReady(latest.current)) setHatching(n.id);
+  const openPrize = () => {
+    const r = claimPrize(latest.current);
+    if (!r) return;
+    setSave(r.save);
+    setPrize(r.prize);
   };
-  const finishHatch = () => {
-    const id = hatching;
-    setHatching(null);
-    if (!id) return;
-    setSave((s) => (s.owned.includes(id) ? s : { ...s, owned: [...s.owned, id], egg: s.egg - EGG_COST, current: id }));
-  };
+  const equip = (monsterId: string, slot: Slot, itemId: string | null) =>
+    setSave((s) => {
+      const o = { ...(s.outfits[monsterId] ?? {}) };
+      if (itemId) o[slot] = itemId;
+      else delete o[slot];
+      return { ...s, outfits: { ...s.outfits, [monsterId]: o } };
+    });
 
   const m = monsterById(save.current);
+  const outfit = save.outfits[m.id];
+  const home = () => setScreen({ k: 'home' });
 
   return (
     <>
-      {screen.k === 'home' && (
-        <Home save={save} onPlay={play} onLightning={lightning} onZoo={() => setScreen({ k: 'zoo' })} onParent={() => setScreen({ k: 'parent' })} onHatch={startHatch} />
-      )}
-      {screen.k === 'play' && (
-        <Play
-          key={screen.id}
-          round={screen.round}
-          m={m}
-          readAloud={save.settings.readAloud}
-          onAnswer={onAnswer}
-          onFinish={onFinish}
-          onQuit={() => setScreen({ k: 'home' })}
+      <Ambient />
+      <div className="screen" key={screen.k === 'play' || screen.k === 'lightning' ? screen.id : screen.k}>
+        {screen.k === 'home' && (
+          <Home
+            save={save}
+            onPlay={play}
+            onLightning={lightning}
+            onZoo={() => setScreen({ k: 'zoo' })}
+            onDressUp={() => setScreen({ k: 'wardrobe', id: save.current, back: 'home' })}
+            onParent={() => setScreen({ k: 'parent' })}
+            onPrize={openPrize}
+          />
+        )}
+        {screen.k === 'play' && (
+          <Play
+            round={screen.round}
+            m={m}
+            outfit={outfit}
+            readAloud={save.settings.readAloud}
+            onAnswer={onAnswer}
+            onFinish={onFinish}
+            onQuit={home}
+          />
+        )}
+        {screen.k === 'lightning' && (
+          <Lightning
+            round={screen.round}
+            m={m}
+            outfit={outfit}
+            bests={save.lightning.bests}
+            onLen={setLightningLen}
+            onAnswer={onAnswer}
+            onFinish={onFinish}
+            onQuit={home}
+          />
+        )}
+        {screen.k === 'end' && (
+          <RoundEnd
+            results={screen.results}
+            m={m}
+            outfit={outfit}
+            save={save}
+            starsBefore={screen.starsBefore}
+            newFluent={screen.newFluent}
+            time={screen.time}
+            prizes={pendingPrizes(save)}
+            onPrize={openPrize}
+            onAgain={screen.mode === 'lightning' ? lightning : play}
+            onHome={home}
+          />
+        )}
+        {screen.k === 'zoo' && <Zoo save={save} onOpen={(id) => setScreen({ k: 'wardrobe', id, back: 'zoo' })} onBack={home} />}
+        {screen.k === 'wardrobe' && (
+          <Wardrobe
+            save={save}
+            monsterId={screen.id}
+            onEquip={equip}
+            onPick={(id) => {
+              setSave((s) => ({ ...s, current: id }));
+              home();
+            }}
+            onBack={() => setScreen(screen.back === 'zoo' ? { k: 'zoo' } : { k: 'home' })}
+          />
+        )}
+        {screen.k === 'parent' && (
+          <Parent
+            save={save}
+            onSettings={(settings) => setSave((s) => ({ ...s, settings }))}
+            onReset={() => setSave(fresh())}
+            onBack={home}
+          />
+        )}
+      </div>
+      {prize && (
+        <PrizeReveal
+          prize={prize}
+          m={monsterById(latest.current.current)}
+          outfit={latest.current.outfits[latest.current.current]}
+          onDone={() => setPrize(null)}
+          onDressUp={() => {
+            setPrize(null);
+            setScreen({ k: 'wardrobe', id: latest.current.current, back: 'home' });
+          }}
         />
       )}
-      {screen.k === 'lightning' && (
-        <Lightning
-          key={screen.id}
-          round={screen.round}
-          m={m}
-          best={save.lightning.best}
-          onAnswer={onAnswer}
-          onFinish={onFinish}
-          onQuit={() => setScreen({ k: 'home' })}
-        />
-      )}
-      {screen.k === 'end' && (
-        <RoundEnd
-          results={screen.results}
-          m={m}
-          newFluent={screen.newFluent}
-          time={screen.time}
-          eggReady={eggReady(save)}
-          onHatch={startHatch}
-          onAgain={screen.mode === 'lightning' ? lightning : play}
-          onHome={() => setScreen({ k: 'home' })}
-        />
-      )}
-      {screen.k === 'zoo' && (
-        <Zoo save={save} onPick={(id) => setSave((s) => ({ ...s, current: id }))} onBack={() => setScreen({ k: 'home' })} />
-      )}
-      {screen.k === 'parent' && (
-        <Parent
-          save={save}
-          onSettings={(settings) => setSave((s) => ({ ...s, settings }))}
-          onReset={() => setSave(fresh())}
-          onBack={() => setScreen({ k: 'home' })}
-        />
-      )}
-      {hatching && <Hatch m={monsterById(hatching)} onDone={finishHatch} />}
     </>
+  );
+}
+
+// Slow-drifting numbers and shapes behind every screen.
+const BITS = ['7', '−', '3', '★', '9', '−', '5', '●', '2', '8', '−', '★', '6', '4'];
+function Ambient() {
+  return (
+    <div className="ambient" aria-hidden="true">
+      {BITS.map((b, i) => (
+        <span
+          key={i}
+          style={{
+            left: `${(i * 73) % 100}%`,
+            animationDelay: `${-(i * 3.7) % 26}s`,
+            animationDuration: `${22 + ((i * 5) % 12)}s`,
+            fontSize: `${2 + ((i * 7) % 5)}rem`,
+          }}
+        >
+          {b}
+        </span>
+      ))}
+    </div>
   );
 }

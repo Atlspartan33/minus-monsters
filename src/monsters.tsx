@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { FaceItem, HeadItem, NeckItem, type Outfit } from './accessories';
 
 export type Body = 'round' | 'blob' | 'tall' | 'square';
 export type Top = 'horns' | 'antenna' | 'ears' | 'none';
@@ -54,13 +55,25 @@ const EYES: Record<1 | 2 | 3, [number, number, number][]> = {
   3: [[62, 106, 15], [100, 86, 17], [138, 106, 15]],
 };
 
-export function Monster({ m, mood = 'idle', silhouette = false }: { m: MonsterDef; mood?: Mood; silhouette?: boolean }) {
+interface MonsterProps {
+  m: MonsterDef;
+  mood?: Mood;
+  silhouette?: boolean;
+  outfit?: Outfit;
+  /** Boss mode: angry brows and a flush. */
+  boss?: boolean;
+  /** Where the pupils look, each axis −1..1. */
+  gaze?: [number, number];
+}
+
+export function Monster({ m, mood = 'idle', silhouette = false, outfit, boss = false, gaze }: MonsterProps) {
   const uid = useId().replace(/:/g, '');
   const base = silhouette ? '#20123F' : m.color;
   const light = silhouette ? '#2A1A52' : mix(m.color, '#FFFFFF', 0.45);
   const dark = silhouette ? '#170C2E' : mix(m.color, '#1B1033', 0.35);
   const ty = TOP_Y[m.body];
   const look = mood === 'confused' ? 4 : mood === 'open' ? 2 : 0;
+  const [gx, gy] = gaze ?? [0, 0];
 
   return (
     <svg viewBox="0 0 200 228" className="monster-svg" role="img" aria-label={silhouette ? 'Mystery monster' : m.name}>
@@ -125,11 +138,27 @@ export function Monster({ m, mood = 'idle', silhouette = false }: { m: MonsterDe
             {EYES[m.eyes].map(([x, y, r], i) => (
               <g key={i}>
                 <circle cx={x} cy={y} r={r} fill="#fff" stroke={dark} strokeWidth="3" />
-                <circle cx={x + (mood === 'confused' ? (i % 2 ? -3 : 3) : 0)} cy={y + look + r * 0.15} r={r * 0.5} fill="#1B1033" />
-                <circle cx={x - r * 0.18} cy={y - r * 0.12 + look} r={r * 0.17} fill="#fff" />
+                <g className="pupil" style={{ transform: `translate(${gx * r * 0.42}px, ${gy * r * 0.36}px)` }}>
+                  <circle cx={x + (mood === 'confused' ? (i % 2 ? -3 : 3) : 0)} cy={y + look + r * 0.15} r={r * 0.5} fill="#1B1033" />
+                  <circle cx={x - r * 0.18} cy={y - r * 0.12 + look} r={r * 0.17} fill="#fff" />
+                </g>
               </g>
             ))}
           </g>
+          {boss && mood !== 'confused' && mood !== 'burp' && (
+            <g stroke="#1B1033" strokeWidth="5" strokeLinecap="round">
+              {EYES[m.eyes].map(([x, y, r], i) => {
+                const inward = x < 100 ? 1 : x > 100 ? -1 : 0;
+                return <line key={i} x1={x - r * 0.9} y1={y - r - 10 - inward * 5} x2={x + r * 0.9} y2={y - r - 10 + inward * 5} />;
+              })}
+            </g>
+          )}
+          {boss && (
+            <g fill="#FF3B6B" opacity="0.35">
+              <ellipse cx="46" cy="136" rx="14" ry="8" />
+              <ellipse cx="154" cy="136" rx="14" ry="8" />
+            </g>
+          )}
           {(mood === 'confused' || mood === 'burp') && (
             <g stroke="#1B1033" strokeWidth="4" strokeLinecap="round">
               {EYES[m.eyes].map(([x, y, r], i) => (
@@ -138,6 +167,9 @@ export function Monster({ m, mood = 'idle', silhouette = false }: { m: MonsterDe
             </g>
           )}
           <Mouth mood={mood} teeth={m.teeth} dark={dark} />
+          {outfit?.neck && <NeckItem id={outfit.neck} />}
+          {outfit?.face && <FaceItem id={outfit.face} eyes={EYES[m.eyes]} />}
+          {outfit?.head && <HeadItem id={outfit.head} ty={ty} />}
         </>
       )}
     </svg>

@@ -1,16 +1,17 @@
 import { useRef, useState } from 'react';
 import { MONSTERS, Monster } from '../monsters';
 import { sfx } from '../sound';
-import { EGG_COST, type Save } from '../store';
+import { pendingPrizes, STOP_EVERY, trailStops, type Save } from '../store';
 
-export function Zoo({ save, onPick, onBack }: { save: Save; onPick: (id: string) => void; onBack: () => void }) {
+export function Zoo({ save, onOpen, onBack }: { save: Save; onOpen: (id: string) => void; onBack: () => void }) {
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  const nextEgg = trailStops(save, save.claimed + 1, 8).find((s) => s.kind === 'egg');
 
   const say = (text: string) => {
     setToast(text);
     window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setToast(null), 2200);
+    timer.current = window.setTimeout(() => setToast(null), 2400);
   };
 
   return (
@@ -26,31 +27,36 @@ export function Zoo({ save, onPick, onBack }: { save: Save; onPick: (id: string)
           {save.owned.length}/{MONSTERS.length}
         </span>
       </header>
-      <p className="zoo-hint">Tap a monster to feed it next. Earn stars to hatch the rest.</p>
+      <p className="zoo-hint">Tap a monster to dress it up or feed it next. Eggs on the Snack Trail hatch the rest.</p>
       <div className="zoo-grid">
-        {MONSTERS.map((m) => {
+        {MONSTERS.map((m, i) => {
           const owned = save.owned.includes(m.id);
           const cur = save.current === m.id;
           return (
             <button
               key={m.id}
               className={`zoo-card ${cur ? 'current' : ''} ${owned ? '' : 'locked'}`}
+              style={{ ['--d' as string]: `${i * 40}ms` }}
               aria-disabled={!owned}
               onClick={() => {
                 if (owned) {
                   sfx.boing();
-                  onPick(m.id);
-                  say(`${m.name} is hungry next!`);
+                  onOpen(m.id);
                 } else {
                   sfx.oops();
-                  say(`Hatch an egg to meet me! ${Math.min(save.egg, EGG_COST)}/${EGG_COST} stars`);
+                  say(
+                    pendingPrizes(save) > 0
+                      ? 'You have a prize waiting on the Snack Trail!'
+                      : nextEgg
+                        ? `Next egg at ${nextEgg.at} stars. You have ${save.stars}!`
+                        : `Keep earning stars! Every ${STOP_EVERY} is a prize.`,
+                  );
                 }
               }}
-              aria-pressed={owned ? cur : undefined}
               aria-label={owned ? `${m.name}${cur ? ', picked' : ''}` : 'Locked monster'}
             >
               <div className="zoo-art">
-                <Monster m={m} silhouette={!owned} />
+                <Monster m={m} silhouette={!owned} outfit={owned ? save.outfits[m.id] : undefined} />
               </div>
               <span className="zoo-name">{owned ? m.name : '???'}</span>
               {cur && <span className="zoo-badge">Picked</span>}
