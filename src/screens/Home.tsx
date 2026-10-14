@@ -106,7 +106,7 @@ export function Home({ save, onPlay, onLightning, onZoo, onDressUp, onParent, on
           <span className="btn-sub">{best ? `Best ${fmtTime(best)} for ${save.settings.lightningLen}` : 'Say it fast!'}</span>
         </button>
 
-        <Trail save={save} m={m} outfit={outfit} compact />
+        <Trail save={save} m={m} outfit={outfit} compact onOpen={go(onPrize)} />
 
         <div className="home-row">
           <button className="btn secondary" onClick={onZoo}>

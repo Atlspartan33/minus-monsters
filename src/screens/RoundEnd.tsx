@@ -90,7 +90,7 @@ export function RoundEnd({ results, m, outfit, save, starsBefore, newFluent, tim
       )}
 
       <div className="end-trail">
-        <Trail save={save} m={m} outfit={outfit} fromStars={starsBefore} />
+        <Trail save={save} m={m} outfit={outfit} fromStars={starsBefore} onOpen={onPrize} />
       </div>
 
       <div className="end-actions">

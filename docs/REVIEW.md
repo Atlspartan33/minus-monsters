@@ -37,3 +37,24 @@ Tests now exist (`npm test`, 21 passing):
 - Ladder rules in `record`.
 - A table test for `parseNumbers`.
 - Snack Trail prize order and claiming.
+
+## UX audit of v2 (ux-auditor, measured) → fixes
+
+The audit measured at 375×812, 800×1280 and 1280×800. The 800×1280 tablet was clean on every layout check.
+
+| Principle | Result | Fixed |
+|---|---|---|
+| Clarity | Pass. The trail-to-prize flow reads for a 7-year-old. The trail stops looked tappable but weren't. | Reached stops are now buttons that open the prize. Stop numbers carry a star. |
+| Hierarchy | Flagged two lime buttons on Home when a prize is waiting. | Re-measured: only "Open your prize!" is lime (72px). "Feed" is the secondary style (59px, 12% white). |
+| Accessibility | Fail: at 375px the streak pill overlapped "Show me" by 15px. The trail "!" was 2.82:1. Boss shake caused a 3px sideways scroll. The wardrobe tabs were 52px. | Monster height cap is now `100dvh − 590px`; at 375×812 the streak ends at 431 and "Show me" starts at 432, with no scroll. The "!" is now ink on pink. `overflow-x: clip` stops the sideways scroll. Tabs are 56px, and the item being worn shows a ✓ badge. |
+| Feedback | Pass. FEED to hand on screen takes 14–19ms. With reduced motion on, the boss intro was invisible during a 1.4s input lock, and the hand never appeared. | Reduced motion now keeps the intro overlay and the hand visible, without the movement. |
+
+Re-measured after fixes (Play, mid-round):
+- 375×812: no scroll.
+- 800×1280: monster 100–556, card 566–682, Show me 770–830, keypad 840–1266, no scroll.
+- 1280×800: two columns, no scroll.
+
+Not verified in the browser pane:
+- Voice (the mic is blocked there).
+- Sound by ear.
+- A real child.

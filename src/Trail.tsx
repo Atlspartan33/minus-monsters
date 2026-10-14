@@ -35,6 +35,14 @@ export function PrizeIcon({ kind, size = 40 }: { kind: PrizeKind; size?: number 
   );
 }
 
+function StarMini() {
+  return (
+    <svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true">
+      <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" fill="#FFD23F" />
+    </svg>
+  );
+}
+
 const PRIZE_WORD: Record<PrizeKind, string> = { egg: 'egg', chest: 'treasure chest', trophy: 'super star' };
 
 interface Props {
@@ -44,9 +52,11 @@ interface Props {
   /** Animate the walk from this many stars to save.stars. */
   fromStars?: number;
   compact?: boolean;
+  /** Tapping a reached stop opens its prize. */
+  onOpen?: () => void;
 }
 
-export function Trail({ save, m, outfit, fromStars, compact = false }: Props) {
+export function Trail({ save, m, outfit, fromStars, compact = false, onOpen }: Props) {
   const base = save.claimed + 1; // first stop shown = next unopened prize
   const stops = trailStops(save, base, SLOTS);
   const startStars = (base - 1) * STOP_EVERY;
@@ -104,19 +114,24 @@ export function Trail({ save, m, outfit, fromStars, compact = false }: Props) {
         <div className="trail-start" style={{ left: `${xOf(0)}%`, top: `${pts[0][1]}%` }} aria-hidden="true" />
         {stops.map((s, i) => {
           const reached = s.at <= save.stars;
+          const Tag = reached && onOpen ? 'button' : 'div';
           return (
-            <div
+            <Tag
               key={s.n}
               className={`trail-stop ${reached ? 'reached' : ''} kind-${s.kind}`}
               style={{ left: `${xOf(i + 1)}%`, top: `${pts[i + 1][1]}%`, ['--d' as string]: `${i * 70}ms` }}
-              aria-label={`${PRIZE_WORD[s.kind]} at ${s.at} stars${reached ? ', ready to open' : ''}`}
+              aria-label={`${PRIZE_WORD[s.kind]} at ${s.at} stars${reached ? ', tap to open' : ''}`}
+              onClick={reached && onOpen ? onOpen : undefined}
             >
               <div className="stop-badge">
                 <PrizeIcon kind={s.kind} size={compact ? 26 : 32} />
                 {reached && <span className="stop-bang">!</span>}
               </div>
-              <span className="stop-at">{s.at}</span>
-            </div>
+              <span className="stop-at">
+                <StarMini />
+                {s.at}
+              </span>
+            </Tag>
           );
         })}
         <div

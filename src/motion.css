@@ -383,7 +383,10 @@
 .boss-sub {
   font-size: clamp(1.2rem, 3vw, 1.6rem);
   font-weight: 600;
-  color: #ffd6e8;
+  color: #fff;
+  background: rgba(27, 16, 51, 0.85);
+  padding: 6px 18px;
+  border-radius: 99px;
   animation: numIn 0.5s 0.35s both;
 }
 .boss-burst {
@@ -532,12 +535,15 @@
   display: grid;
   place-items: center;
   background: var(--pink);
-  color: #fff;
+  color: var(--ink);
   font-weight: 700;
   font-size: 0.95rem;
   border: 2px solid #fff;
 }
 .stop-at {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   font-size: 0.85rem;
   font-weight: 700;
   color: #e9e1ff;
@@ -632,7 +638,7 @@
   justify-content: center;
 }
 .seg.tabs button {
-  min-height: 52px;
+  min-height: 56px;
   padding: 6px 22px;
   font-size: 1.15rem;
   font-weight: 600;
@@ -655,9 +661,26 @@
   padding: 10px 6px;
   animation: numIn 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
+.item-card {
+  position: relative;
+}
 .item-card.on {
   border-color: var(--lime);
   background: rgba(184, 242, 58, 0.16);
+}
+.item-card.on::after {
+  content: '✓';
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--lime);
+  color: var(--ink);
+  font-weight: 700;
 }
 .item-card.locked .item-art {
   filter: grayscale(1) brightness(0.55);
@@ -824,10 +847,10 @@
 /* Portrait: the monster gives up height first so the problem, feedback and keypad always fit. */
 @media (orientation: portrait) {
   .play {
-    --mon: max(140px, min(34dvh, 66vw, 400px, calc((100dvh - 560px) * 0.9)));
+    --mon: max(140px, min(34dvh, 66vw, 400px, calc((100dvh - 590px) * 0.9)));
   }
   .play.boss-mode {
-    --mon: max(140px, min(34dvh, 66vw, 400px, calc((100dvh - 560px) * 0.9)));
+    --mon: max(140px, min(34dvh, 66vw, 400px, calc((100dvh - 590px) * 0.9)));
   }
 }
 .key:disabled {
@@ -835,4 +858,35 @@
   background: #ddd5f0;
   color: #6d5f94;
   box-shadow: 0 6px 0 #b9acd9;
+}
+
+button.trail-stop {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.ready-body {
+  --mon: min(30dvh, 60vw, 360px);
+}
+@media (max-height: 860px) {
+  .ready-body {
+    --mon: min(22dvh, 50vw, 260px);
+    gap: 10px;
+  }
+}
+/* Reduced motion: keep the story, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .boss-intro {
+    animation: none !important;
+    opacity: 1;
+  }
+  .feed,
+  .feed-tile {
+    animation: none !important;
+  }
+  .trail-token {
+    transition: none;
+  }
 }
