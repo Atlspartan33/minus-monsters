@@ -83,15 +83,15 @@ export function Maker({ count, max, onSave, onBack }: Props) {
         </div>
       </div>
 
-      <label className="name-field">
-        <span>Name</span>
+      <div className="name-field">
+        <label htmlFor="monster-name">Name</label>
         <div className="name-row">
-          <input value={def.name} maxLength={22} onChange={(e) => setDef((d) => ({ ...d, name: e.target.value }))} />
+          <input id="monster-name" value={def.name} maxLength={22} onChange={(e) => setDef((d) => ({ ...d, name: e.target.value }))} />
           <button className="btn ghost" onClick={() => set({ name: silly() })}>
             New name
           </button>
         </div>
-      </label>
+      </div>
 
       <fieldset className="maker-group">
         <legend>Color</legend>

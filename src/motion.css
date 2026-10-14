@@ -1019,3 +1019,20 @@ button.trail-stop {
   font-weight: 700;
   color: var(--lime);
 }
+
+/* Final audit: the Maker's finish button is always reachable without scrolling. */
+.maker .wardrobe-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--ground) 30%);
+  max-width: none;
+}
+.maker .wardrobe-actions .btn {
+  max-width: 460px;
+  margin: 0 auto;
+}
+.trail-stop {
+  min-width: 48px;
+}

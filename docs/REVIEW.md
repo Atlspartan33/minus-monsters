@@ -80,3 +80,18 @@ Not verified in the browser pane:
 - A real child's voice through a real mic. The pane blocks the mic, and Android speech recognition needs internet.
 - Whether Android beeps when the recognizer restarts.
 - Hearing the mix on the tablet's own speaker.
+
+## Final full audit (ux-auditor, all screens × 375 / 800×1280 / 1280×800)
+
+- **Clarity: pass.**
+- **Feedback: pass.** Wrong answer and help demo both respond within 150ms.
+- **Contrast:** 0 failures on any screen.
+- **Layout:** no horizontal scroll anywhere, and no vertical scroll on Play or Lightning rounds.
+- **Ghost-button fix:** confirmed. All ghost buttons now lay out normally.
+
+The audit flagged 5 items. All are fixed and re-measured at 800×1280:
+1. The Maker's "Bring X to life!" button started at y=1312, below the fold. It's now pinned to the bottom of the screen, at 1172–1268 in a 1280-tall viewport.
+2. "+ Make a monster" sat below 11 locked cards. The Homemade section now comes first, and the button sits at y=165.
+3. The trail chest button was 42px wide on phones. Stops now have a 48px minimum width.
+4. The name input's label also read "New name". The label now covers only the input and reads "Name".
+5. The Lightning length radios also had `aria-pressed`. That's removed, so they're radios only.

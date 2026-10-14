@@ -28,6 +28,39 @@ export function Zoo({ save, onOpen, onMake, onBack }: { save: Save; onOpen: (id:
         </span>
       </header>
       <p className="zoo-hint">Tap a monster to dress it up or feed it next. Eggs on the Snack Trail hatch the rest.</p>
+      <h3 className="zoo-section">Homemade monsters</h3>
+      <div className="zoo-grid">
+        {save.customs.map((m, i) => {
+          const cur = save.current === m.id;
+          return (
+            <button
+              key={m.id}
+              className={`zoo-card ${cur ? 'current' : ''}`}
+              style={{ ['--d' as string]: `${i * 40}ms` }}
+              onClick={() => {
+                sfx.boing();
+                onOpen(m.id);
+              }}
+              aria-label={`${m.name}${cur ? ', picked' : ''}`}
+            >
+              <div className="zoo-art">
+                <Monster m={m} outfit={save.outfits[m.id]} />
+              </div>
+              <span className="zoo-name">{m.name}</span>
+              {cur && <span className="zoo-badge">Picked</span>}
+            </button>
+          );
+        })}
+        {save.customs.length < MAX_CUSTOM && (
+          <button className="zoo-card make-card" onClick={onMake}>
+            <span className="make-plus" aria-hidden="true">
+              +
+            </span>
+            <span className="zoo-name">Make a monster</span>
+          </button>
+        )}
+      </div>
+      <h3 className="zoo-section">Monsters to collect</h3>
       <div className="zoo-grid">
         {MONSTERS.map((m, i) => {
           const owned = save.owned.includes(m.id);
@@ -63,38 +96,6 @@ export function Zoo({ save, onOpen, onMake, onBack }: { save: Save; onOpen: (id:
             </button>
           );
         })}
-      </div>
-      <h3 className="zoo-section">Homemade monsters</h3>
-      <div className="zoo-grid">
-        {save.customs.map((m, i) => {
-          const cur = save.current === m.id;
-          return (
-            <button
-              key={m.id}
-              className={`zoo-card ${cur ? 'current' : ''}`}
-              style={{ ['--d' as string]: `${i * 40}ms` }}
-              onClick={() => {
-                sfx.boing();
-                onOpen(m.id);
-              }}
-              aria-label={`${m.name}${cur ? ', picked' : ''}`}
-            >
-              <div className="zoo-art">
-                <Monster m={m} outfit={save.outfits[m.id]} />
-              </div>
-              <span className="zoo-name">{m.name}</span>
-              {cur && <span className="zoo-badge">Picked</span>}
-            </button>
-          );
-        })}
-        {save.customs.length < MAX_CUSTOM && (
-          <button className="zoo-card make-card" onClick={onMake}>
-            <span className="make-plus" aria-hidden="true">
-              +
-            </span>
-            <span className="zoo-name">Make a monster</span>
-          </button>
-        )}
       </div>
       {toast && (
         <div className="zoo-toast" role="status" key={toast}>

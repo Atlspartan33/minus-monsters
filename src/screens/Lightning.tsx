@@ -272,7 +272,6 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
                       key={n}
                       role="radio"
                       aria-checked={round.length === n}
-                      aria-pressed={round.length === n}
                       onClick={() => {
                         sfx.key();
                         onLen(n);
