@@ -33,7 +33,18 @@ export const MONSTERS: MonsterDef[] = [
   { id: 'snaccident', name: 'Big Snaccident', color: '#E9A6FF', body: 'square', eyes: 3, top: 'antenna', teeth: 'buck', spots: true, line: 'Oops, I ate the whole thing.' },
 ];
 
-export const monsterById = (id: string) => MONSTERS.find((m) => m.id === id) ?? MONSTERS[0];
+// Monsters she designs herself (Monster Maker) live in her save; App registers them here each render.
+let customs: MonsterDef[] = [];
+export const setCustomMonsters = (defs: MonsterDef[]) => {
+  customs = defs;
+};
+export const allMonsters = () => [...MONSTERS, ...customs];
+export const monsterById = (id: string) => allMonsters().find((m) => m.id === id) ?? MONSTERS[0];
+
+export const BODIES: Body[] = ['round', 'blob', 'tall', 'square'];
+export const TOPS: Top[] = ['horns', 'antenna', 'ears', 'none'];
+export const TEETH: Teeth[] = ['fangs', 'buck', 'none'];
+export const COLORS = ['#8EE04A', '#FF5FA8', '#25C9B4', '#FF9A3C', '#5CC2FF', '#FFD23F', '#FF5A5A', '#7BE8C4', '#9C8CFF', '#E9A6FF', '#F2B632', '#C47A4E'];
 
 function mix(hex: string, to: string, t: number) {
   const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));

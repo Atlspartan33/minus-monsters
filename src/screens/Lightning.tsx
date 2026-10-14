@@ -319,7 +319,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
         </button>
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={queue.length} aria-valuenow={idx} aria-label="Round progress">
           <div className="progress-fill" style={{ width: `${(idx / queue.length) * 100}%` }} />
-          {ghost !== null && <div className="ghost" style={{ left: `${ghost * 100}%` }} title="Your best run" aria-hidden="true" />}
+          {ghost !== null && <div className="ghost-mark" style={{ left: `${ghost * 100}%` }} title="Your best run" aria-hidden="true" />}
           <span className="progress-text">{fmtTime(elapsed)}</span>
         </div>
         <div className="round-stars" aria-label={`${stars} stars this round`}>

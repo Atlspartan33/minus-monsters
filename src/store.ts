@@ -3,6 +3,8 @@ import { ACCESSORIES, type Accessory, type Outfit } from './accessories';
 import type { Settings, Stats } from './engine';
 import { MONSTERS, type MonsterDef } from './monsters';
 
+export const MAX_CUSTOM = 6;
+
 const KEY = 'minus-monsters-v1';
 
 /** Every 15 stars is a stop on the Snack Trail, and every stop has a prize. */
@@ -29,6 +31,7 @@ export interface Save {
   current: string;
   items: string[]; // accessories won
   outfits: Record<string, Outfit>;
+  customs: MonsterDef[]; // monsters she designed in the Monster Maker
   stats: Stats;
   boss: { seen: number; right: number; borrowSeen: number; borrowRight: number };
   bossWins: number;
@@ -45,6 +48,7 @@ export const fresh = (): Save => ({
   current: MONSTERS[0].id,
   items: [],
   outfits: {},
+  customs: [],
   stats: {},
   boss: { seen: 0, right: 0, borrowSeen: 0, borrowRight: 0 },
   bossWins: 0,

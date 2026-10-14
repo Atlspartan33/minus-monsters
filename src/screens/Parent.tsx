@@ -215,7 +215,7 @@ export function Parent({ save, onSettings, onReset, onBack }: Props) {
         </fieldset>
         <label className="toggle">
           <input type="checkbox" checked={st.sound} onChange={(e) => set({ sound: e.target.checked })} />
-          <span>Sounds and read-aloud</span>
+          <span>Sounds, buzzes and read-aloud</span>
         </label>
         <label className="toggle">
           <input type="checkbox" checked={st.readAloud} onChange={(e) => set({ readAloud: e.target.checked })} />

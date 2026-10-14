@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { MONSTERS, Monster } from '../monsters';
 import { sfx } from '../sound';
-import { pendingPrizes, STOP_EVERY, trailStops, type Save } from '../store';
+import { MAX_CUSTOM, pendingPrizes, STOP_EVERY, trailStops, type Save } from '../store';
 
-export function Zoo({ save, onOpen, onBack }: { save: Save; onOpen: (id: string) => void; onBack: () => void }) {
+export function Zoo({ save, onOpen, onMake, onBack }: { save: Save; onOpen: (id: string) => void; onMake: () => void; onBack: () => void }) {
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const nextEgg = trailStops(save, save.claimed + 1, 8).find((s) => s.kind === 'egg');
@@ -63,6 +63,38 @@ export function Zoo({ save, onOpen, onBack }: { save: Save; onOpen: (id: string)
             </button>
           );
         })}
+      </div>
+      <h3 className="zoo-section">Homemade monsters</h3>
+      <div className="zoo-grid">
+        {save.customs.map((m, i) => {
+          const cur = save.current === m.id;
+          return (
+            <button
+              key={m.id}
+              className={`zoo-card ${cur ? 'current' : ''}`}
+              style={{ ['--d' as string]: `${i * 40}ms` }}
+              onClick={() => {
+                sfx.boing();
+                onOpen(m.id);
+              }}
+              aria-label={`${m.name}${cur ? ', picked' : ''}`}
+            >
+              <div className="zoo-art">
+                <Monster m={m} outfit={save.outfits[m.id]} />
+              </div>
+              <span className="zoo-name">{m.name}</span>
+              {cur && <span className="zoo-badge">Picked</span>}
+            </button>
+          );
+        })}
+        {save.customs.length < MAX_CUSTOM && (
+          <button className="zoo-card make-card" onClick={onMake}>
+            <span className="make-plus" aria-hidden="true">
+              +
+            </span>
+            <span className="zoo-name">Make a monster</span>
+          </button>
+        )}
       </div>
       {toast && (
         <div className="zoo-toast" role="status" key={toast}>

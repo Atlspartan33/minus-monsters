@@ -110,7 +110,7 @@ export function Home({ save, onPlay, onLightning, onZoo, onDressUp, onParent, on
 
         <div className="home-row">
           <button className="btn secondary" onClick={onZoo}>
-            Zoo · {save.owned.length}/{MONSTERS.length}
+            Zoo · {save.owned.filter((id) => MONSTERS.some((m) => m.id === id)).length}/{MONSTERS.length}
           </button>
           <button className="btn secondary" onClick={onDressUp}>
             Dress up

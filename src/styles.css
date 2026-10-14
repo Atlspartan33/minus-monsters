@@ -1344,7 +1344,7 @@ button:disabled {
   font-size: 1.3rem;
   font-weight: 600;
 }
-.ghost {
+.ghost-mark {
   position: absolute;
   z-index: 2;
   top: 0;

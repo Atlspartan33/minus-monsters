@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Slot } from './accessories';
 import { FLUENT_BOX, buildLightning, buildRound, record, type Attempt, type Problem, type Stats } from './engine';
-import { monsterById } from './monsters';
+import { monsterById, setCustomMonsters } from './monsters';
 import { PrizeReveal } from './Prize';
 import { Home } from './screens/Home';
 import { Lightning } from './screens/Lightning';
+import { Maker } from './screens/Maker';
 import { Parent } from './screens/Parent';
 import { Play, type Result } from './screens/Play';
 import { RoundEnd } from './screens/RoundEnd';
 import { Wardrobe } from './screens/Wardrobe';
 import { Zoo } from './screens/Zoo';
 import { setSound } from './sound';
-import { claimPrize, fresh, pendingPrizes, useSave, type Prize } from './store';
+import { MAX_CUSTOM, claimPrize, fresh, pendingPrizes, useSave, type Prize } from './store';
 
 type Run = { round: Problem[]; before: Stats; starsBefore: number; id: number };
 type Screen =
@@ -28,6 +29,7 @@ type Screen =
     }
   | { k: 'zoo' }
   | { k: 'wardrobe'; id: string; back: 'home' | 'zoo' }
+  | { k: 'maker' }
   | { k: 'parent' };
 
 export default function App() {
@@ -36,6 +38,7 @@ export default function App() {
   const [prize, setPrize] = useState<Prize | null>(null);
   const latest = useRef(save);
   latest.current = save;
+  setCustomMonsters(save.customs);
 
   useEffect(() => {
     setSound(save.settings.sound);
@@ -201,7 +204,22 @@ export default function App() {
             onHome={home}
           />
         )}
-        {screen.k === 'zoo' && <Zoo save={save} onOpen={(id) => setScreen({ k: 'wardrobe', id, back: 'zoo' })} onBack={home} />}
+        {screen.k === 'zoo' && (
+          <Zoo save={save} onOpen={(id) => setScreen({ k: 'wardrobe', id, back: 'zoo' })} onMake={() => setScreen({ k: 'maker' })} onBack={home} />
+        )}
+        {screen.k === 'maker' && (
+          <Maker
+            count={save.customs.length}
+            max={MAX_CUSTOM}
+            onSave={(def) => {
+              setSave((s) => ({ ...s, customs: [...s.customs, def], owned: [...s.owned, def.id], current: def.id }));
+              setCustomMonsters([...save.customs, def]);
+              setPrize({ kind: 'egg', monster: def });
+              setScreen({ k: 'zoo' });
+            }}
+            onBack={() => setScreen({ k: 'zoo' })}
+          />
+        )}
         {screen.k === 'wardrobe' && (
           <Wardrobe
             save={save}
