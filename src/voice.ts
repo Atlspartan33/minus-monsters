@@ -85,29 +85,32 @@ export function createListener(
   r.interimResults = true;
   r.maxAlternatives = 5;
   let want = false;
-  let seen = 0;
-  let minIndex = 0;
+  // False between mark() and the fresh session starting, so a late result from the old problem is dropped.
+  let live = false;
+  let refreshing = false;
   let restarts: number[] = [];
 
   r.onresult = (e) => {
-    if (!want) return; // stopped: drop anything still in flight
-    seen = e.results.length;
-    for (let i = Math.max(e.resultIndex, minIndex); i < e.results.length; i++) {
+    if (!want || !live) return; // stopped or between problems: drop anything still in flight
+    for (let i = e.resultIndex; i < e.results.length; i++) {
       const res = e.results[i];
       const alts: number[][] = [];
       for (let j = 0; j < res.length; j++) alts.push(parseNumbers(res[j].transcript));
       onHeard({ text: res[0]?.transcript ?? '', alts, final: res.isFinal });
     }
   };
-  r.onstart = () => onState('listening');
+  r.onstart = () => {
+    live = true;
+    onState('listening');
+  };
   // Android ends the session after a pause; keep it going while the round runs.
   r.onend = () => {
-    seen = 0;
-    minIndex = 0;
+    live = false;
     if (want) {
-      // Don't spin if the recognizer keeps dying (no network, busy mic).
+      // Don't spin if the recognizer keeps dying (no network, busy mic). Our own restarts don't count.
       const now = Date.now();
-      restarts = [...restarts.filter((t) => now - t < 3000), now];
+      if (!refreshing) restarts = [...restarts.filter((t) => now - t < 3000), now];
+      refreshing = false;
       if (restarts.length > 4) {
         want = false;
         onState('offline');
@@ -147,8 +150,17 @@ export function createListener(
         /* not running */
       }
     },
+    // Result positions can't be trusted (Android hands each phrase over as a one-item list),
+    // so a new problem gets a fresh session instead of an index cutoff.
     mark() {
-      minIndex = seen;
+      live = false;
+      if (!want) return;
+      refreshing = true;
+      try {
+        r.abort();
+      } catch {
+        refreshing = false;
+      }
     },
   };
 }

@@ -55,6 +55,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
   const [stars, setStars] = useState(0);
   const g = useRef({ idx: 0, queue: round, tries: 0, busy: true, shownAt: 0, firstHeardAt: 0, startAt: 0, results: [] as Result[], done: false });
   const listener = useRef<Listener | null>(null);
+  const micOn = useRef(false);
   const timers = useRef<number[]>([]);
   const later = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
 
@@ -190,10 +191,23 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
             text: st === 'offline' ? 'The mic needs internet. Type your answers instead!' : 'The mic is off. Type your answers instead!',
             tone: 'soft',
           });
-        } else setMic(st === 'listening' ? 'listening' : 'off');
+        } else {
+          micOn.current = st === 'listening';
+          setMic(micOn.current ? 'listening' : 'off');
+        }
       },
     );
+    micOn.current = false;
     listener.current?.start();
+    // A recognizer that never starts would leave "Starting the mic…" up forever.
+    later(() => {
+      if (!listener.current || micOn.current) return;
+      listener.current.stop();
+      listener.current = null;
+      setMic('blocked');
+      setTyping(true);
+      setFlash({ text: 'The mic didn’t start. Type your answers instead!', tone: 'soft' });
+    }, 6000);
   };
 
   const start = () => {
