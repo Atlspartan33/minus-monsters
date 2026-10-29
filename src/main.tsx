@@ -5,6 +5,7 @@ import '@fontsource/fredoka/600.css';
 import '@fontsource/fredoka/700.css';
 import './styles.css';
 import './motion.css';
+import './fun.css';
 import App from './App';
 
 createRoot(document.getElementById('root')!).render(

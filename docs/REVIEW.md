@@ -95,3 +95,39 @@ The audit flagged 5 items. All are fixed and re-measured at 800×1280:
 3. The trail chest button was 42px wide on phones. Stops now have a 48px minimum width.
 4. The name input's label also read "New name". The label now covers only the input and reads "Name".
 5. The Lightning length radios also had `aria-pressed`. That's removed, so they're radios only.
+
+## Round 4 (2026-10-28): Munch Monsters
+
+**Built:**
+- Four tracks: − + × ÷. Times and Share start on the 1, 2 and 10 tables, and the next tables open at 60% fluent.
+- A mini boss in the middle of every round.
+- Voice-like burps. Measured, they now land louder than a chomp, with the worst overlap peaking at 0.85.
+- Dancing, tickle tricks, Home bubbles, multi-tap chests and stars, a sparkly keypad, 10 new monsters, and 5 Snack Trail worlds.
+- The mic was rebuilt for Android, plus a mic test dialog.
+
+**Code review fixes:**
+- Lightning rejected answers equal to the first number (×1, ÷1) as "reading the problem".
+- Lightning couldn't type 100.
+- Lightning's answer reveal showed "−" on every track.
+- The 6s mic fallback ran before the watchdog could retry.
+- "Blocked" was overwritten by "idle".
+- Late events from a replaced recognizer could clobber the new session.
+- Some Share boss bites were plain facts.
+- `.track` was shared by the picker and the Lightning lane.
+- A damaged `ops` list could crash migration.
+- Focus was lost when the hero monster and prize remounted.
+
+**UX audit fixes:**
+- At 375px, 10 plates covered the keypad. Plates now use 2 columns on phones, rows of five, and a capped, scrollable area.
+- The mic test hid the "blocked" status.
+- The wordmark badge was 2.82:1. It now uses an ink glyph (6.38:1).
+- Grown-up controls were 43px. They are now 44px.
+- Added dots showed by colour alone. They now carry a "+".
+- Home scrolled 9px at 800×1280. It now fits exactly.
+
+**Not yet checked:**
+- The 1280×800 landscape layout.
+- Trail worlds 2–5 on a real screen.
+- Prize multi-tap visuals.
+- Any audio on the tablet speaker.
+- Voice on the real tablet.

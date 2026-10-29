@@ -44,6 +44,10 @@ export function parseNumbers(text: string): number[] {
   const out: number[] = [];
   let pend: number | null = null;
   for (const t of tokens) {
+    if (t === 'hundred') {
+      pend = (pend ?? 1) * 100; // "one hundred", or just "hundred"
+      continue;
+    }
     const v = /^\d+$/.test(t) ? Number(t) : HOMOPHONES.has(t) && !alone ? undefined : WORDS[t];
     if (v === undefined) {
       if (pend !== null) out.push(pend);
@@ -94,6 +98,10 @@ export function createListener(
   let sid = 0; // session counter
   let staleSid = -1; // a session whose speech belongs to the previous problem
   let heardInSession = false;
+  let started = false; // the open session has fired onstart
+  let everStarted = false; // the first start may sit behind Chrome's mic permission prompt
+  let openedAt = 0;
+  let dead = false; // gave up (blocked/offline): don't let a late onend report "idle"
   let lastEvent = 0;
   let fails: number[] = [];
   let retry = 0;
@@ -105,20 +113,25 @@ export function createListener(
     x.continuous = false;
     x.interimResults = true;
     x.maxAlternatives = 5;
+    // A replaced recognizer can still fire late events; only the current one may touch state.
     x.onstart = () => {
+      if (x !== r) return;
+      started = everStarted = true;
       lastEvent = Date.now();
       log('start');
       if (want) onState('listening');
     };
     x.onsoundstart = () => {
+      if (x !== r) return;
       lastEvent = Date.now();
       log('sound');
       if (want) onState('hearing');
     };
     x.onsoundend = () => {
-      if (want) onState('listening');
+      if (x === r && want) onState('listening');
     };
     x.onresult = (e) => {
+      if (x !== r) return;
       lastEvent = Date.now();
       heardInSession = true;
       if (!want || sid === staleSid) return; // stopped, or speech left over from the last problem
@@ -131,6 +144,7 @@ export function createListener(
       }
     };
     x.onerror = (e) => {
+      if (x !== r) return;
       lastEvent = Date.now();
       log(`error: ${e.error}`);
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
@@ -142,10 +156,11 @@ export function createListener(
       }
     };
     x.onend = () => {
+      if (x !== r) return;
       running = false;
       log('end');
       if (want) queue(120);
-      else onState('idle');
+      else if (!dead) onState('idle');
     };
     return x;
   };
@@ -153,6 +168,7 @@ export function createListener(
   const give = (st: 'blocked' | 'offline') => {
     if (!want) return;
     want = false;
+    dead = true;
     clearInterval(dog);
     clearTimeout(retry);
     try {
@@ -175,17 +191,28 @@ export function createListener(
     r ??= make();
     sid++;
     heardInSession = false;
-    lastEvent = Date.now();
+    started = false;
+    openedAt = lastEvent = Date.now();
     try {
       r.start();
       running = true;
     } catch {
       // Still winding down: try again shortly with a fresh recognizer.
       log('start failed');
-      r = make();
+      replace();
       bump();
       queue(400);
     }
+  };
+
+  const replace = () => {
+    try {
+      r?.abort();
+    } catch {
+      /* gone */
+    }
+    running = false;
+    r = make();
   };
 
   const queue = (ms: number) => {
@@ -197,21 +224,17 @@ export function createListener(
     start() {
       if (want) return;
       want = true;
+      dead = false;
       fails = [];
       open();
-      // A session that's open but silent for 9s (or never opened) gets replaced.
+      // A session that never starts (3s) or goes silent (9s) gets replaced.
       dog = window.setInterval(() => {
         if (!want) return;
+        const now = Date.now();
         if (!running) queue(0);
-        else if (Date.now() - lastEvent > 9000) {
-          log('stuck: restarting');
-          try {
-            r?.abort();
-          } catch {
-            /* gone */
-          }
-          running = false;
-          r = make();
+        else if ((!started && now - openedAt > (everStarted ? 3000 : 12000)) || (started && now - lastEvent > 9000)) {
+          log(started ? 'stuck: restarting' : 'never started: retrying');
+          replace();
           queue(150);
         }
       }, 1000);

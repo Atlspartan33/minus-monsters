@@ -1,0 +1,520 @@
+/* Round 4: tracks, mini boss, dancing, tickle tricks, bubbles, and the sparkly keypad. */
+
+/* ---------- wordmark: the middle badge shows the track's symbol ---------- */
+.op-badge {
+  display: grid;
+  place-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  border-radius: 30%;
+  background: var(--pink);
+  color: var(--ink);
+  font-size: 0.85em;
+  line-height: 1;
+  transform: rotate(-8deg);
+  box-shadow: 0 4px 0 #b3246a;
+  animation: badgeIn 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes badgeIn {
+  from {
+    transform: rotate(-200deg) scale(0.2);
+  }
+}
+
+/* ---------- track picker ---------- */
+.tracks {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.tracks .track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 56px;
+  border: 3px solid rgba(255, 255, 255, 0.22);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  transition: transform 0.08s ease;
+}
+.tracks .track b {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.tracks .track span {
+  font-size: 0.95rem;
+}
+.tracks .track:active {
+  transform: translateY(3px);
+}
+.tracks .track[aria-checked='true'] {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--sun);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3);
+}
+.tracks .track[aria-checked='true'] b {
+  color: #b3246a;
+}
+
+/* ---------- name row + dance button ---------- */
+.hero-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--sky);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 0 #1f7fb8;
+}
+.dance-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #1f7fb8;
+}
+.dance-btn:disabled {
+  opacity: 0.6;
+}
+
+/* ---------- dancing: two bars of moves, timed to sfx.dance (240ms beats) ---------- */
+.trick-dance .monster,
+.dancing .monster {
+  animation: dance 1.92s ease-in-out 2 !important;
+  transform-origin: 50% 90%;
+}
+.dancing.forever .monster {
+  animation-iteration-count: infinite !important;
+}
+@keyframes dance {
+  0% {
+    transform: none;
+  }
+  6% {
+    transform: translateY(-14%) rotate(-8deg) scale(1.02, 0.98);
+  }
+  12.5% {
+    transform: translateY(0) scale(1.12, 0.88);
+  }
+  19% {
+    transform: translateY(-14%) rotate(8deg);
+  }
+  25% {
+    transform: translateY(0) scale(1.12, 0.88);
+  }
+  31% {
+    transform: translateX(-12%) rotate(-12deg);
+  }
+  37.5% {
+    transform: translateX(12%) rotate(12deg);
+  }
+  44% {
+    transform: translateX(-12%) rotate(-12deg);
+  }
+  50% {
+    transform: translateX(0) rotate(0);
+  }
+  62.5% {
+    transform: translateY(-22%) rotate(180deg) scale(0.95);
+  }
+  75% {
+    transform: translateY(0) rotate(360deg) scale(1.1, 0.9);
+  }
+  81% {
+    transform: scale(0.9, 1.12) translateY(-6%);
+  }
+  87.5% {
+    transform: scale(1.12, 0.88);
+  }
+  94% {
+    transform: scale(0.9, 1.12) translateY(-6%);
+  }
+  100% {
+    transform: none;
+  }
+}
+/* Zoo dance party: everyone a beat apart so it looks like a crowd. */
+.dancing .monster {
+  animation-delay: var(--beat, 0ms) !important;
+}
+
+/* ---------- tickle tricks ---------- */
+.trick-giggle .monster {
+  animation: giggle 0.12s linear 8 !important;
+}
+@keyframes giggle {
+  50% {
+    transform: translateX(3%) rotate(3deg);
+  }
+}
+.trick-spin .monster {
+  animation: spinOnce 0.8s cubic-bezier(0.3, 1.3, 0.5, 1) !important;
+}
+@keyframes spinOnce {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.trick-sneeze .monster {
+  animation: sneeze 0.9s ease !important;
+}
+@keyframes sneeze {
+  0%,
+  45% {
+    transform: scale(1, 1.06) translateY(-3%) rotate(-6deg);
+  }
+  55% {
+    transform: scale(1.12, 0.86) translateY(6%) rotate(4deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+.trick-burp .monster {
+  animation: burpPuff 0.8s ease !important;
+}
+@keyframes burpPuff {
+  40% {
+    transform: scale(1.12, 0.94);
+  }
+}
+.trick-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.trick-fx i {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  font-style: normal;
+  font-weight: 700;
+}
+.trick-fx.hearts i {
+  color: var(--pink);
+  font-size: clamp(1.6rem, 4dvh, 2.6rem);
+  animation: heartUp 1.2s ease-out both;
+  animation-delay: calc(var(--i) * 0.12s);
+  margin-left: calc((var(--i) - 2) * 14%);
+}
+@keyframes heartUp {
+  from {
+    opacity: 0;
+    transform: translateY(0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-160%) scale(1.2);
+  }
+}
+.trick-fx.sneeze i {
+  color: var(--sun);
+  font-size: clamp(1.4rem, 3.4dvh, 2.2rem);
+  top: 58%;
+  animation: sneezeOut 0.9s 0.45s ease-out both;
+  transform: rotate(var(--a));
+}
+@keyframes sneezeOut {
+  from {
+    opacity: 1;
+    transform: rotate(var(--a)) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--a)) translateY(-260%);
+  }
+}
+
+/* ---------- bubbles to pop on Home ---------- */
+.home {
+  position: relative;
+}
+.bubbles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.home > *:not(.bubbles) {
+  position: relative;
+  z-index: 1;
+}
+.home > .bubbles {
+  position: absolute;
+}
+.pop-bubble {
+  position: absolute;
+  bottom: -90px;
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0 12%, rgba(255, 210, 240, 0.28) 13% 60%, rgba(140, 200, 255, 0.35));
+  color: #fff;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  pointer-events: auto;
+  animation: floatUp 9s linear forwards;
+  touch-action: manipulation;
+}
+.pop-bubble span {
+  text-shadow: 0 2px 0 rgba(27, 16, 51, 0.6);
+}
+@keyframes floatUp {
+  to {
+    transform: translate(18px, calc(-100dvh - 120px));
+  }
+}
+.pop-bubble.popped {
+  animation: bubblePop 0.4s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes bubblePop {
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+    border-width: 0;
+  }
+}
+
+/* ---------- mini boss ---------- */
+.mini-mode .monster-wrap {
+  transform: scale(1.03);
+}
+.boss-aura.mini {
+  background: radial-gradient(closest-side, rgba(255, 210, 63, 0.5), rgba(255, 210, 63, 0) 75%);
+}
+.boss-tag.mini {
+  background: var(--sun);
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+.boss-intro.mini {
+  background: radial-gradient(50% 32% at 50% 50%, rgba(255, 210, 63, 0.4), rgba(20, 6, 40, 0.8));
+  animation-duration: 1s;
+}
+.boss-intro.mini .boss-slam {
+  font-size: clamp(2.6rem, 8vw, 5rem);
+  text-shadow:
+    0 6px 0 #b8860b,
+    0 0 30px rgba(255, 210, 63, 0.8);
+}
+
+/* ---------- sparkly keypad: lilac-pink keys, a heart in the corner, sparkle on press ---------- */
+.key {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, #fff6fb 0%, #ffe3f1 100%);
+  box-shadow: 0 6px 0 #f0b4d4;
+}
+.key:active:not(:disabled) {
+  box-shadow: 0 2px 0 #f0b4d4;
+}
+.key::before {
+  content: '♥';
+  position: absolute;
+  top: 5px;
+  right: 9px;
+  font-size: 0.42em;
+  line-height: 1;
+  color: #ff9ccb;
+  opacity: 0.75;
+}
+.key::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--sx, 30%) var(--sy, 25%), rgba(255, 255, 255, 0.9) 0 4%, transparent 5%),
+    radial-gradient(circle at 78% 70%, rgba(255, 255, 255, 0.7) 0 2.5%, transparent 3.5%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.key:active:not(:disabled)::after {
+  opacity: 1;
+  transition: none;
+}
+.key.del {
+  background: linear-gradient(160deg, #f1e8ff 0%, #e4d6ff 100%);
+}
+.key.del::before,
+.key.go::before {
+  content: none;
+}
+.key.go {
+  background: linear-gradient(160deg, #d4ff6a 0%, var(--lime) 100%);
+  box-shadow: 0 6px 0 var(--lime-dark);
+}
+.key.go:disabled {
+  background: #6f6890;
+  box-shadow: 0 6px 0 #4c4570;
+}
+/* Nine keys, a little sparkle each in a different spot. */
+.keypad .key:nth-child(3n + 1) {
+  --sx: 22%;
+  --sy: 30%;
+}
+.keypad .key:nth-child(3n + 2) {
+  --sx: 70%;
+  --sy: 22%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trick-dance .monster,
+  .dancing .monster,
+  .trick-giggle .monster,
+  .trick-spin .monster,
+  .trick-sneeze .monster,
+  .trick-burp .monster {
+    animation: none !important;
+  }
+  .pop-bubble {
+    animation-duration: 18s;
+  }
+  .trick-fx i {
+    animation: none;
+    display: none;
+  }
+}
+
+/* ---------- chest and star take taps too ---------- */
+.chest-btn {
+  position: relative;
+}
+.chest-btn.crack-1,
+.chest-btn.crack-2 {
+  animation: chestJolt 0.35s ease;
+}
+@keyframes chestJolt {
+  30% {
+    transform: rotate(-7deg) scale(1.06);
+  }
+  60% {
+    transform: rotate(6deg) scale(0.97);
+  }
+}
+.chest-sparks i {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--sun);
+  transform: rotate(var(--a)) translateY(0);
+  animation: spark 0.6s ease-out forwards;
+}
+@keyframes spark {
+  to {
+    transform: rotate(var(--a)) translateY(-120px) scale(0.3);
+    opacity: 0;
+  }
+}
+.chest-btn.charging svg {
+  transform: scale(calc(1 + var(--charge) * 0.35));
+  filter: drop-shadow(0 0 calc(var(--charge) * 40px) rgba(255, 210, 63, 0.95));
+  transition:
+    transform 0.25s cubic-bezier(0.2, 1.6, 0.4, 1),
+    filter 0.25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chest-btn.crack-1,
+  .chest-btn.crack-2 {
+    animation: none;
+  }
+  .chest-sparks {
+    display: none;
+  }
+}
+
+/* Round-end dance waits for the count-up, Zoo party button sits under the hint. */
+.end-monster.dancing.late .monster {
+  animation-delay: 0.7s !important;
+}
+.party-btn {
+  align-self: center;
+  margin: 4px auto 0;
+  background: var(--pink);
+  color: var(--ink);
+  box-shadow: 0 4px 0 #b3246a;
+}
+
+/* ---------- audit fixes ---------- */
+/* Plates hold snacks in rows of five, like a ten-frame, so a plate of ten reads as ten. */
+.plate {
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  justify-content: center;
+  align-content: center;
+}
+.plate:has(.rod) {
+  display: flex;
+}
+.plates-wrap {
+  max-height: 48dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (min-width: 541px) {
+  .plates.n10 {
+    --cols: 4;
+  }
+  .plates.n7,
+  .plates.n8 {
+    --cols: 4;
+  }
+}
+@media (max-width: 540px) {
+  .plates.n4,
+  .plates.n5,
+  .plates.n7,
+  .plates.n8,
+  .plates.n10 {
+    --cols: 2;
+  }
+  .plates.n6,
+  .plates.n9 {
+    --cols: 3;
+  }
+}
+/* Added dots carry a "+" so "count the blue ones" isn't colour alone. */
+.dot.added {
+  display: grid;
+  place-items: center;
+}
+.dot.added::after {
+  content: '+';
+  color: var(--ink);
+  font-weight: 700;
+  font-size: clamp(0.9rem, 2.2dvh, 1.6rem);
+  line-height: 1;
+}
+/* Grown-up controls reach 44px. */
+.grownups,
+.parent .seg button {
+  min-height: 44px;
+}
+.home-actions {
+  gap: 10px;
+}

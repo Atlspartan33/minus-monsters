@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Outfit } from '../accessories';
-import { isSpeedy, opText, type Attempt, type Problem } from '../engine';
+import { OP_INFO, isSpeedy, opText, type Attempt, type Problem } from '../engine';
 import { FeedHand } from '../FeedHand';
 import { HelpDemo } from '../Help';
 import { Monster, type MonsterDef, type Mood } from '../monsters';
@@ -46,6 +46,7 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
   const [feed, setFeed] = useState<{ id: number; value: number; fork: boolean } | null>(null);
   const [gaze, setGaze] = useState<[number, number]>([0, 0.2]);
   const [bossIntro, setBossIntro] = useState(false);
+  const [miniIntro, setMiniIntro] = useState(false);
   const [bossWin, setBossWin] = useState(0);
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const results = useRef<Result[]>([]);
@@ -89,6 +90,19 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
         if (readAloud) speak(opText(p));
       }, 1400);
       timers.current.push(t);
+    } else if (p.mini && !p.comeback) {
+      setMiniIntro(true);
+      setBusy(true);
+      sfx.miniBoss();
+      timers.current.push(window.setTimeout(() => shakeScreen(5), 120));
+      timers.current.push(
+        window.setTimeout(() => {
+          setMiniIntro(false);
+          setBusy(false);
+          started.current = performance.now();
+          if (readAloud) speak(opText(p));
+        }, 1000),
+      );
     } else if (readAloud) speak(opText(p));
   }, [p, readAloud]);
 
@@ -136,7 +150,7 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
     if (val === p.answer) {
       const at: Attempt = { firstTry: tries === 0, usedHelp: helped, ms: performance.now() - started.current };
       const speedy = isSpeedy(p, at);
-      const stars = 1 + (speedy ? 1 : 0) + (p.boss ? 2 : 0);
+      const stars = 1 + (speedy ? 1 : 0) + (p.boss ? 2 : p.mini ? 1 : 0);
       results.current.push({ p, at, speedy, stars });
       onAnswer(p, at, stars);
       const clean = at.firstTry && !at.usedHelp;
@@ -162,6 +176,10 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
           setBossWin((b) => b + 1);
           sfx.bossWin();
           shakeScreen(14);
+        } else if (p.mini) {
+          setBossWin((b) => b + 1);
+          sfx.speedy();
+          shakeScreen(7);
         } else if (speedy) sfx.speedy();
         else sfx.yum();
         setRoundStars((s) => s + stars);
@@ -169,7 +187,9 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
         setFlash(
           p.boss
             ? { text: `BOSS BEATEN! +${stars}`, tone: 'great' }
-            : speedy
+            : p.mini
+              ? { text: `MINI BOSS BEATEN! +${stars}`, tone: 'great' }
+              : speedy
               ? { text: 'SPEEDY! +2', tone: 'great' }
               : { text: clean ? 'YUM! +1' : 'Got it! +1', tone: 'good' },
         );
@@ -181,7 +201,7 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
         const firstBoss = queue.findIndex((x, i) => i > idx && x.boss);
         const end = firstBoss === -1 ? queue.length : firstBoss;
         const at2 = Math.max(Math.min(idx + 4, end), Math.min(idx + 2, queue.length));
-        q = [...queue.slice(0, at2), { ...p, comeback: true }, ...queue.slice(at2)];
+        q = [...queue.slice(0, at2), { ...p, comeback: true, mini: false }, ...queue.slice(at2)];
         setQueue(q);
       }
 
@@ -190,8 +210,8 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
       if (burp) {
         later(() => {
           setMood('burp');
-          setFlash({ text: `BURRRP! ${st} in a row`, tone: 'burp' });
-          sfx.burp();
+          setFlash({ text: `${st >= 15 ? 'MEGA ' : ''}BURRRP! ${st} in a row`, tone: 'burp' });
+          sfx.burp(st >= 15 ? 3 : st >= 10 ? 2 : 1);
         }, BITE_AT + 650);
         wait = 2600;
       } else later(() => setMood('happy'), BITE_AT + 450);
@@ -261,13 +281,14 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
     </span>
   );
 
+  const sym = OP_INFO[p.op].sym;
   const parts =
     p.kind === 'missing'
-      ? [<span key="a">{p.a}</span>, <span key="op" className="op">−</span>, <span key="box">{box}</span>, <span key="eq" className="op">=</span>, <span key="c">{p.c}</span>]
-      : [<span key="a">{p.a}</span>, <span key="op" className="op">−</span>, <span key="b">{p.b}</span>, <span key="eq" className="op">=</span>, <span key="box">{box}</span>];
+      ? [<span key="a">{p.a}</span>, <span key="op" className="op">{sym}</span>, <span key="box">{box}</span>, <span key="eq" className="op">=</span>, <span key="c">{p.c}</span>]
+      : [<span key="a">{p.a}</span>, <span key="op" className="op">{sym}</span>, <span key="b">{p.b}</span>, <span key="eq" className="op">=</span>, <span key="box">{box}</span>];
 
   return (
-    <main className={`play ${p.boss ? 'boss-mode' : ''}`} ref={mainRef}>
+    <main className={`play ${p.boss ? 'boss-mode' : p.mini ? 'mini-mode' : ''}`} ref={mainRef}>
       {p.boss && <div className="boss-vignette" aria-hidden="true" />}
       <header className="play-top">
         <button className="icon-btn" onClick={onQuit} aria-label="Back to home">
@@ -292,9 +313,10 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
         ) : (
           <div className={`monster-wrap mood-${mood} ${p.boss ? 'is-boss' : ''}`} key={idx} ref={monsterRef}>
             {p.comeback && <div className="boss-tag comeback">Comeback!</div>}
-            {p.boss && <div className="boss-aura" aria-hidden="true" />}
+            {p.mini && <div className="boss-tag mini">Mini boss</div>}
+            {(p.boss || p.mini) && <div className={`boss-aura ${p.mini ? 'mini' : ''}`} aria-hidden="true" />}
             <div className="monster big">
-              <Monster m={m} mood={mood} outfit={outfit} boss={p.boss} gaze={gaze} />
+              <Monster m={m} mood={mood} outfit={outfit} boss={p.boss || !!p.mini} gaze={gaze} />
             </div>
             {feed && <FeedHand key={feed.id} value={feed.value} fork={feed.fork} />}
             {crumbs > 0 && mood === 'chomp' && (
@@ -304,7 +326,7 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
                 ))}
               </div>
             )}
-            {p.boss && bossWin > 0 && (
+            {(p.boss || p.mini) && bossWin > 0 && (
               <div className="boss-burst" key={`w${bossWin}`} aria-hidden="true">
                 <span className="ring" />
                 <span className="ring r2" />
@@ -371,6 +393,13 @@ export function Play({ round, m, outfit, readAloud, onAnswer, onFinish, onQuit }
           </button>
         </div>
       </section>
+
+      {miniIntro && (
+        <div className="boss-intro mini" role="alert">
+          <span className="boss-slam">MINI BOSS!</span>
+          <span className="boss-sub">A sneaky one. You’ve got this.</span>
+        </div>
+      )}
 
       {bossIntro && (
         <div className="boss-intro" role="alert">

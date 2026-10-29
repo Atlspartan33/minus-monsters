@@ -28,11 +28,14 @@ export function MicCheck({ onClose }: { onClose: () => void }) {
       (ev) => !gone && setLog((xs) => [...xs.slice(-5), ev]),
     );
     l?.start();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
     return () => {
       gone = true;
       l?.stop();
+      window.removeEventListener('keydown', onKey);
     };
-  }, []);
+  }, [onClose]);
 
   const status =
     got !== null
@@ -45,7 +48,9 @@ export function MicCheck({ onClose }: { onClose: () => void }) {
             ? 'I hear you…'
             : state === 'listening'
               ? 'Say any number!'
-              : 'Starting the mic…';
+              : state === 'idle'
+                ? 'The mic stopped. Close and try again.'
+                : 'Starting the mic…';
 
   return (
     <div className="hatch mic-check" role="dialog" aria-modal="true" aria-label="Mic test">

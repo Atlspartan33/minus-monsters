@@ -5,7 +5,8 @@ import { sfx } from './sound';
 import type { Prize } from './store';
 import { PrizeIcon } from './Trail';
 
-// Opening a Snack Trail prize. Eggs take three taps to crack; chests pop on one.
+// Opening a Snack Trail prize. Eggs crack in three taps, chests unlock in three, and a
+// super star charges up over five.
 
 interface Props {
   prize: Prize;
@@ -17,15 +18,18 @@ interface Props {
 
 export function PrizeReveal({ prize, m, outfit, onDone, onDressUp }: Props) {
   const [taps, setTaps] = useState(0);
-  const need = prize.kind === 'egg' ? 3 : 1;
+  const need = prize.kind === 'trophy' ? 5 : 3;
   const out = taps >= need;
 
   const tap = () => {
     if (out) return;
     const t = taps + 1;
     setTaps(t);
-    if (t < need) sfx.crack();
-    else if (prize.kind === 'egg') sfx.hatch();
+    if (t < need) {
+      if (prize.kind === 'egg') sfx.crack();
+      else if (prize.kind === 'chest') sfx.nibble();
+      else sfx.sparkle();
+    } else if (prize.kind === 'egg') sfx.hatch();
     else if (prize.kind === 'chest') sfx.chest();
     else sfx.bossWin();
   };
@@ -42,7 +46,7 @@ export function PrizeReveal({ prize, m, outfit, onDone, onDressUp }: Props) {
 
       {!out && prize.kind === 'egg' && (
         <>
-          <button className={`egg crack-${taps}`} key={taps} onClick={tap} aria-label={`Egg, tap ${need - taps} more times`}>
+          <button className={`egg crack-${taps}`} key={taps} autoFocus onClick={tap} aria-label={`Egg, tap ${need - taps} more times`}>
             <svg viewBox="0 0 160 200" aria-hidden="true">
               <defs>
                 <radialGradient id="eggg" cx="35%" cy="30%" r="80%">
@@ -70,9 +74,30 @@ export function PrizeReveal({ prize, m, outfit, onDone, onDressUp }: Props) {
       )}
 
       {!out && prize.kind !== 'egg' && (
-        <button className="egg chest-btn" onClick={tap} aria-label={prize.kind === 'chest' ? 'Open the chest' : 'Tap the star'}>
-          <PrizeIcon kind={prize.kind} size={170} />
-        </button>
+        <>
+          <button
+            className={`egg chest-btn crack-${Math.min(taps, 2)} ${prize.kind === 'trophy' ? 'charging' : ''}`}
+            key={taps}
+            autoFocus
+            onClick={tap}
+            style={{ ['--charge' as string]: taps / need }}
+            aria-label={`${prize.kind === 'chest' ? 'Chest' : 'Star'}, tap ${need - taps} more time${need - taps === 1 ? '' : 's'}`}
+          >
+            <PrizeIcon kind={prize.kind} size={170} />
+            {prize.kind === 'chest' && taps > 0 && (
+              <span className="chest-sparks" aria-hidden="true">
+                {Array.from({ length: 4 + taps * 3 }, (_, i) => (
+                  <i key={i} style={{ ['--a' as string]: `${i * (360 / (4 + taps * 3))}deg` }} />
+                ))}
+              </span>
+            )}
+          </button>
+          <div className="hatch-dots" aria-hidden="true">
+            {Array.from({ length: need }, (_, i) => (
+              <span key={i} className={i < taps ? 'on' : ''} />
+            ))}
+          </div>
+        </>
       )}
 
       {out && prize.kind === 'egg' && (

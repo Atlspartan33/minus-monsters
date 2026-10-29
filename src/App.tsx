@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Slot } from './accessories';
-import { FLUENT_BOX, buildLightning, buildRound, record, type Attempt, type Problem, type Stats } from './engine';
+import { FLUENT_BOX, bestKey, buildLightning, buildRound, factLabel, record, type Attempt, type Op, type Problem, type Stats } from './engine';
 import { monsterById, setCustomMonsters } from './monsters';
 import { PrizeReveal } from './Prize';
 import { Home } from './screens/Home';
@@ -56,6 +56,7 @@ export default function App() {
     const s = latest.current;
     setScreen({ k: 'lightning', round: buildLightning(s.stats, s.settings), ...run(s) });
   }, []);
+  const setTrack = (op: Op) => setSave((s) => ({ ...s, settings: { ...s.settings, op } }));
   const setLightningLen = (n: number) => {
     const s = { ...latest.current, settings: { ...latest.current.settings, lightningLen: n } };
     setSave(s);
@@ -88,14 +89,14 @@ export default function App() {
     (results: Result[], totalMs?: number) => {
       if (screen.k !== 'play' && screen.k !== 'lightning') return;
       const mode: 'tap' | 'lightning' = screen.k === 'lightning' ? 'lightning' : 'tap';
-      const key = String(screen.round.length);
+      const key = bestKey(screen.round[0]?.op ?? 'sub', screen.round.length);
       const prevBest = latest.current.lightning.bests[key] ?? null;
       const isNew = mode === 'lightning' && totalMs !== undefined && (prevBest === null || totalMs < prevBest);
       const before = screen.before;
       const after = latest.current.stats;
       const newFluent = Object.keys(after)
         .filter((k) => after[k].box >= FLUENT_BOX && (before[k]?.box ?? 0) < FLUENT_BOX)
-        .map((k) => k.replace('-', ' − '));
+        .map(factLabel);
       const facts = results.filter((r) => !r.p.boss);
       setSave((s) => ({
         ...s,
@@ -110,6 +111,7 @@ export default function App() {
             avgMs: facts.length ? Math.round(facts.reduce((t, r) => t + r.at.ms, 0) / facts.length) : 0,
             stars: results.reduce((t, r) => t + r.stars, 0),
             mode,
+            op: screen.round[0]?.op,
             totalMs: totalMs === undefined ? undefined : Math.round(totalMs),
           },
         ].slice(-200),
@@ -164,6 +166,7 @@ export default function App() {
             onDressUp={() => setScreen({ k: 'wardrobe', id: save.current, back: 'home' })}
             onParent={() => setScreen({ k: 'parent' })}
             onPrize={openPrize}
+            onTrack={setTrack}
           />
         )}
         {screen.k === 'play' && (
@@ -258,7 +261,7 @@ export default function App() {
 }
 
 // Slow-drifting numbers and shapes behind every screen.
-const BITS = ['7', '−', '3', '★', '9', '−', '5', '●', '2', '8', '−', '★', '6', '4'];
+const BITS = ['7', '−', '3', '★', '9', '+', '5', '●', '2', '×', '8', '★', '÷', '4'];
 function Ambient() {
   return (
     <div className="ambient" aria-hidden="true">

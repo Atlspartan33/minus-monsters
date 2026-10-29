@@ -750,6 +750,94 @@ button:disabled {
   opacity: 0.25;
   transform: scale(0.7);
 }
+.dot.added {
+  background: var(--sky);
+  border-color: #1f7fb8;
+  animation: popin 0.35s ease;
+}
+.dot.added.left {
+  background: var(--sky);
+  border-color: #1f7fb8;
+  animation: glow 1s ease-in-out infinite;
+}
+.cube.added {
+  background: var(--sky);
+  border-color: #1f7fb8;
+}
+.rod.added span {
+  background: var(--lime);
+  border-color: #5d8a0b;
+}
+.rod.fresh {
+  animation: popin 0.4s ease;
+}
+/* Times and Share: snacks on plates. */
+.plates-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.pile {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 560px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.plates {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 720px);
+}
+.plates.n1 { --cols: 1; width: min(100%, 220px); }
+.plates.n2 { --cols: 2; width: min(100%, 440px); }
+.plates.n3 { --cols: 3; width: min(100%, 600px); }
+.plates.n4 { --cols: 4; }
+.plates.n6,
+.plates.n9 { --cols: 3; }
+.plate {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: clamp(64px, 9dvh, 110px);
+  padding: 8px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 4px solid #e8d9ff;
+  box-shadow: inset 0 -6px 0 rgba(27, 16, 51, 0.12);
+}
+.plate.done {
+  border-color: var(--lime);
+}
+.snack {
+  width: clamp(12px, 1.9dvh, 20px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 2px solid #b3246a;
+}
+.snack.fresh {
+  animation: popin 0.3s ease;
+}
+.snack.gone,
+.rod.mini.gone {
+  opacity: 0.15;
+  transform: scale(0.7);
+}
+.rod.mini {
+  width: clamp(12px, 1.8dvh, 18px);
+}
+.rod.mini span {
+  height: clamp(6px, 1dvh, 10px);
+}
 .help-actions {
   display: flex;
   gap: 10px;

@@ -1,0 +1,381 @@
+/* Snack Trail worlds: sky, road and decorations per world, plus the world gate.
+   Imported by Trail.tsx. Every rule is scoped under .trail / .trail-board so it wins over
+   motion.css whatever order the two load in. */
+
+/* ---------- world accents (text on these is --ink, ≥8:1) ---------- */
+.tw-candy,
+.gate-candy {
+  --acc: #ff8cc6;
+}
+.tw-ocean,
+.gate-ocean {
+  --acc: #6fdcff;
+}
+.tw-volcano,
+.gate-volcano {
+  --acc: #ffa95e;
+}
+.tw-space,
+.gate-space {
+  --acc: #c3b4ff;
+}
+.tw-castle,
+.gate-castle {
+  --acc: #ffe066;
+}
+
+/* ---------- current-world label above the board ---------- */
+.trail .trail-world {
+  margin: 0 4px 6px;
+  min-height: 22px;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  color: #d9ccff;
+}
+.trail-world > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tw-emblem {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+.tw-emblem svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.tw-num {
+  font-weight: 600;
+}
+.tw-num::after {
+  content: '·';
+  margin-left: 6px;
+}
+.tw-name {
+  font-weight: 700;
+  color: var(--acc);
+}
+.trail-world .entered {
+  animation: worldPop 0.3s ease-out both;
+  transform-origin: left center;
+}
+@keyframes worldPop {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ---------- sky ---------- */
+.trail-board .world-sky {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* The next world starts at the gate, with a short soft seam. */
+.trail-board .world-sky.next {
+  -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--gx) - 1.5%), #000 calc(var(--gx) + 1.5%));
+  mask-image: linear-gradient(90deg, transparent calc(var(--gx) - 1.5%), #000 calc(var(--gx) + 1.5%));
+}
+.sky-candy {
+  background:
+    radial-gradient(circle at 9% 16%, #fff 0 2px, transparent 3px),
+    radial-gradient(circle at 52% 9%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 84% 34%, #fff 0 2px, transparent 3px),
+    radial-gradient(70% 36% at 16% 114%, #9fe8b8 0 98%, transparent 100%),
+    radial-gradient(80% 42% at 86% 118%, #b8f0c9 0 98%, transparent 100%),
+    linear-gradient(#ffc2e2, #ffe6f3);
+}
+.sky-ocean {
+  background:
+    radial-gradient(95% 28% at 50% 120%, #ffe3a3 0 98%, transparent 100%),
+    linear-gradient(
+      105deg,
+      transparent 18%,
+      rgba(255, 255, 255, 0.22) 26%,
+      transparent 34%,
+      transparent 56%,
+      rgba(255, 255, 255, 0.16) 62%,
+      transparent 68%
+    ),
+    linear-gradient(#7fe0ff, #2f8fe0);
+}
+.sky-volcano {
+  background:
+    radial-gradient(60% 55% at 28% -5%, rgba(255, 255, 255, 0.4), transparent 70%),
+    radial-gradient(95% 32% at 60% 120%, #8a4a22 0 98%, transparent 100%),
+    linear-gradient(#ffd59e, #ff9a8b);
+}
+.sky-space {
+  background:
+    radial-gradient(circle at 6% 18%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 17% 82%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 39% 12%, #ffe98a 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 46% 88%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 60% 22%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 81% 80%, #ffe98a 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 98% 40%, #fff 0 1px, transparent 2px),
+    radial-gradient(55% 70% at 70% 30%, rgba(255, 95, 168, 0.28), transparent 70%),
+    linear-gradient(#170f4d, #3b1f8a);
+}
+.sky-castle {
+  background:
+    radial-gradient(28% 30% at 8% 112%, #fff 0 98%, transparent 100%),
+    radial-gradient(34% 34% at 42% 118%, #fff 0 98%, transparent 100%),
+    radial-gradient(30% 30% at 80% 112%, #fff 0 98%, transparent 100%),
+    linear-gradient(#bfe6ff, #ffe0f1);
+}
+
+/* ---------- decorations (aria-hidden; never on a stop) ---------- */
+.trail-board .world-deco {
+  position: absolute;
+  display: block;
+  width: var(--s);
+  line-height: 0;
+  transform: translate(-50%, -50%);
+}
+.world-deco svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.deco-a {
+  --s: 32px;
+  left: 28.5%;
+  top: 22%;
+}
+.deco-b {
+  --s: 34px;
+  left: 71.5%;
+  top: 22%;
+}
+.deco-c {
+  --s: 20px;
+  left: 93%;
+  top: 11%;
+}
+.trail.compact .deco-a,
+.trail.compact .deco-b {
+  --s: 28px;
+}
+.trail.compact .deco-c {
+  --s: 18px;
+}
+.deco-bob svg {
+  animation: decoBob 2.6s ease-in-out infinite alternate;
+}
+.deco-b.deco-bob svg {
+  animation-delay: -1.3s;
+}
+.deco-twinkle svg,
+.gate-spark svg {
+  animation: decoTwinkle 1.8s ease-in-out infinite alternate;
+}
+@keyframes decoBob {
+  to {
+    transform: translateY(-4px);
+  }
+}
+@keyframes decoTwinkle {
+  from {
+    transform: scale(0.7) rotate(-10deg);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1.1) rotate(10deg);
+    opacity: 1;
+  }
+}
+
+/* ---------- road ---------- */
+.trail-board .trail-edge {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 24;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+/* Dash patterns sum to 12 or 24 so motion.css's dashMove loops without a jump. */
+.trail-board .w-candy .trail-road {
+  stroke: #ff8cc6;
+}
+.trail-board .w-candy .trail-dash {
+  stroke: #fff;
+  stroke-width: 5;
+  stroke-dasharray: 6 6;
+  stroke-linecap: butt;
+}
+.trail-board .w-ocean .trail-road {
+  stroke: #2a6fd0;
+}
+.trail-board .w-ocean .trail-dash {
+  stroke: #fff;
+  stroke-width: 6;
+  stroke-dasharray: 0.01 11.99;
+  stroke-linecap: round;
+}
+.trail-board .w-volcano .trail-road {
+  stroke: #8a4a22;
+}
+.trail-board .w-volcano .trail-dash {
+  stroke: #ff8cc6;
+  stroke-width: 4;
+  stroke-dasharray: 5 7;
+  stroke-linecap: round;
+}
+.trail-board .w-space .trail-road {
+  stroke: #4b3bb8;
+}
+.trail-board .w-space .trail-dash {
+  stroke: #ffd23f;
+  stroke-width: 5;
+  stroke-dasharray: 0.01 7.99 0.01 15.99;
+  stroke-linecap: round;
+}
+.trail-board .w-castle .trail-road {
+  stroke: #fff;
+}
+.trail-board .w-castle .trail-dash {
+  stroke-width: 6;
+  stroke-dasharray: 8 4;
+  stroke-linecap: butt;
+}
+
+/* ---------- stops: an ink ring so badges read on any sky ---------- */
+.trail-board .trail-stop {
+  z-index: 2;
+}
+.trail-board .stop-badge {
+  box-shadow: 0 0 0 2px rgba(27, 16, 51, 0.85);
+}
+.trail-board .trail-stop.reached .stop-badge {
+  box-shadow:
+    0 0 0 2px var(--ink),
+    0 0 22px rgba(255, 210, 63, 0.75);
+}
+.trail-board .stop-at {
+  background: rgba(27, 16, 51, 0.85);
+}
+/* Focus ring that shows on pale and dark skies alike: ink / sun / ink. */
+.trail-board button.trail-stop:focus-visible {
+  border-radius: 14px;
+  outline: 4px solid var(--sun);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 3px var(--ink),
+    0 0 0 9px var(--ink);
+}
+
+/* ---------- world gate ---------- */
+.trail-board .trail-gate {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.gate-arch {
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 74%;
+  width: auto;
+  aspect-ratio: 36 / 88;
+  transform: translateX(-50%);
+  overflow: visible;
+  filter: drop-shadow(0 3px 0 rgba(27, 16, 51, 0.35));
+}
+.gate-frame {
+  fill: var(--acc);
+}
+.gate-spark {
+  position: absolute;
+  display: block;
+  line-height: 0;
+  width: 11px;
+  left: 14px;
+  top: 30%;
+}
+.gate-spark.s2 {
+  width: 9px;
+  left: -24px;
+  top: 64%;
+}
+.gate-spark.s2 svg {
+  animation-delay: -0.9s;
+}
+.gate-spark svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.gate-spark path {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.gate-name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateX(var(--anchor, -50%));
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--ink);
+  background: var(--acc);
+  padding: 1px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 99px;
+  box-shadow: 0 2px 0 rgba(27, 16, 51, 0.35);
+}
+.world-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- breakpoints ---------- */
+@media (max-width: 540px) {
+  .trail .trail-world {
+    font-size: 0.85rem;
+  }
+  .gate-name {
+    font-size: 0.72rem;
+    padding: 0 6px;
+  }
+}
+/* Phone-narrow: drop decorative art, keep the sky, road and gate. */
+@media (max-width: 380px) {
+  .trail-board .world-deco {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-deco svg,
+  .gate-spark svg,
+  .trail-world .entered {
+    animation: none;
+  }
+}

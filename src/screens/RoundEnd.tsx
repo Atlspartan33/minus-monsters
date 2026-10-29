@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { sfx } from '../sound';
 import type { Outfit } from '../accessories';
 import { Monster, type MonsterDef } from '../monsters';
 import type { Save } from '../store';
@@ -43,10 +44,17 @@ export function RoundEnd({ results, m, outfit, save, starsBefore, newFluent, tim
   const helped = results.filter((r) => r.at.usedHelp).length;
   const boss = results.filter((r) => r.p.boss);
   const shown = useCountUp(stars);
+  // Most answered first try: the monster does a victory dance.
+  const party = results.length > 0 && first / results.length >= 0.6;
+  useEffect(() => {
+    if (!party) return;
+    const ts = [window.setTimeout(() => sfx.dance(), 700), window.setTimeout(() => sfx.dance(), 700 + 1920)];
+    return () => ts.forEach(clearTimeout);
+  }, [party]);
 
   return (
     <main className="end">
-      <div className="monster-wrap mood-happy end-monster">
+      <div className={`monster-wrap mood-happy end-monster ${party ? 'dancing late' : ''}`}>
         <div className="monster big full">
           <Monster m={m} mood="happy" outfit={outfit} />
         </div>

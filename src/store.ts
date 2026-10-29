@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ACCESSORIES, type Accessory, type Outfit } from './accessories';
-import type { Settings, Stats } from './engine';
+import type { Op, Settings, Stats } from './engine';
 import { MONSTERS, type MonsterDef } from './monsters';
 
 export const MAX_CUSTOM = 6;
@@ -20,6 +20,7 @@ export interface RoundLog {
   avgMs: number;
   stars: number;
   mode?: 'tap' | 'lightning';
+  op?: Op;
   totalMs?: number;
 }
 
@@ -54,7 +55,7 @@ export const fresh = (): Save => ({
   bossWins: 0,
   rounds: [],
   lightning: { bests: {}, runs: 0 },
-  settings: { roundLen: 12, boss: 'auto', sound: true, readAloud: false, lightningLen: 15 },
+  settings: { roundLen: 12, boss: 'auto', sound: true, readAloud: false, lightningLen: 15, op: 'sub', ops: ['sub', 'add', 'mul', 'div'] },
 });
 
 type Legacy = Partial<Save> & { egg?: number; lightning?: { best?: number | null; bests?: Record<string, number>; runs?: number } };
@@ -68,6 +69,9 @@ function migrate(s: Legacy): Save {
   if (typeof s.claimed !== 'number') out.claimed = Math.floor((s.stars ?? 0) / STOP_EVERY);
   delete out.egg;
   if (!out.owned.includes(out.current)) out.current = out.owned[0] ?? MONSTERS[0].id;
+  const ops = Array.isArray(out.settings.ops) ? out.settings.ops.filter((o) => f.settings.ops.includes(o)) : [];
+  out.settings.ops = ops.length ? ops : f.settings.ops;
+  if (!out.settings.ops.includes(out.settings.op)) out.settings.op = out.settings.ops[0];
   return out;
 }
 

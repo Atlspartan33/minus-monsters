@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BODIES, COLORS, Monster, TEETH, TOPS, type Body, type MonsterDef, type Mood, type Teeth, type Top } from '../monsters';
+import { BODIES, COLORS, Monster, TEETH, TOPS, type MonsterDef, type Mood, type Shape, type Teeth, type Topper } from '../monsters';
 import { sfx } from '../sound';
 
 // Monster Maker: she designs her own monster. Every choice previews live.
@@ -11,8 +11,8 @@ const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 const silly = () => `${pick(FIRST)} ${pick(CORE)}${pick(END)}`;
 const LINES = ['I was made with love. And snacks.', 'Fresh from the Monster Maker!', 'Feed me numbers, please!', 'I like my problems crunchy.'];
 
-const BODY_WORD: Record<Body, string> = { round: 'Round', blob: 'Blobby', tall: 'Tall', square: 'Boxy' };
-const TOP_WORD: Record<Top, string> = { horns: 'Horns', antenna: 'Antenna', ears: 'Ears', none: 'Nothing' };
+const BODY_WORD: Record<Shape, string> = { round: 'Round', blob: 'Blobby', tall: 'Tall', square: 'Boxy', pear: 'Pear', cloud: 'Cloud' };
+const TOP_WORD: Record<Topper, string> = { horns: 'Horns', antenna: 'Antenna', ears: 'Ears', bunny: 'Bunny ears', unicorn: 'Unicorn horn', none: 'Nothing' };
 const TEETH_WORD: Record<Teeth, string> = { fangs: 'Fangs', buck: 'Buck teeth', none: 'No teeth' };
 
 interface Props {

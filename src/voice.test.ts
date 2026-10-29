@@ -117,3 +117,68 @@ describe('createListener on Android-style recognizers', () => {
     expect(states).toContain('blocked');
   });
 });
+
+describe('createListener edge cases from review', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    FakeSR.all = [];
+    (globalThis as Record<string, unknown>).window = { SpeechRecognition: FakeSR, isSecureContext: true, setTimeout, clearTimeout, setInterval, clearInterval };
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    delete (globalThis as Record<string, unknown>).window;
+  });
+
+  it('a replaced recognizer ending late does not break the new session', async () => {
+    const heard: Heard[] = [];
+    const states: string[] = [];
+    const l = createListener((h) => heard.push(h), (s) => states.push(s))!;
+    l.start();
+    await vi.advanceTimersByTimeAsync(50);
+    const old = live();
+    // It goes quiet without ending; the watchdog replaces it.
+    old.abort = () => {};
+    await vi.advanceTimersByTimeAsync(10_500);
+    const fresh = FakeSR.last;
+    expect(fresh).not.toBe(old);
+    old.onend?.(); // the old one's end finally arrives
+    old.onstart?.();
+    await vi.advanceTimersByTimeAsync(300);
+    FakeSR.last.say('four');
+    expect(heard.map((h) => h.text)).toEqual(['four']);
+    expect(states).not.toContain('offline');
+  });
+
+  it('retries a later session that never fires onstart', async () => {
+    const heard: Heard[] = [];
+    const l = createListener((h) => heard.push(h), () => {})!;
+    l.start();
+    await vi.advanceTimersByTimeAsync(50);
+    live().say('two'); // first session works and ends
+    const proto = FakeSR.prototype.start;
+    let mute = true;
+    FakeSR.prototype.start = function (this: FakeSR) {
+      if (mute) {
+        mute = false;
+        this.running = true; // opens but never reports onstart
+        return;
+      }
+      proto.call(this);
+    };
+    await vi.advanceTimersByTimeAsync(4500);
+    FakeSR.prototype.start = proto;
+    await vi.advanceTimersByTimeAsync(300);
+    FakeSR.all.filter((x) => x.running).at(-1)!.say('nine');
+    expect(heard.map((h) => h.text)).toEqual(['two', 'nine']);
+  });
+
+  it('blocked stays blocked after the recognizer ends', async () => {
+    const states: string[] = [];
+    const l = createListener(() => {}, (s) => states.push(s))!;
+    l.start();
+    await vi.advanceTimersByTimeAsync(50);
+    live().onerror?.({ error: 'not-allowed' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(states.at(-1)).toBe('blocked');
+  });
+});

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Outfit } from '../accessories';
 import { LIGHTNING_LENGTHS } from '../store';
-import { VOICE_FAST_MS, isSpeedy, type Attempt, type Problem } from '../engine';
+import { OP_INFO, VOICE_FAST_MS, bestKey, isSpeedy, type Attempt, type Problem } from '../engine';
 import { Monster, type MonsterDef, type Mood } from '../monsters';
 import { sfx, warm } from '../sound';
 import { createListener, voiceAvailable, voiceProblem, type Heard, type Listener } from '../voice';
@@ -34,7 +34,8 @@ export const fmtTime = (ms: number) => {
 };
 
 export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, onQuit }: Props) {
-  const best = bests[String(round.length)] ?? null;
+  const op = round[0]?.op ?? 'sub';
+  const best = bests[bestKey(op, round.length)] ?? null;
   const problem = voiceProblem();
   const [phase, setPhase] = useState<'ready' | 'count' | 'go'>('ready');
   const [count, setCount] = useState(3);
@@ -45,6 +46,11 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
   const [heard, setHeard] = useState('');
   const [mic, setMic] = useState<'off' | 'listening' | 'hearing' | 'blocked'>('off');
   const [checking, setChecking] = useState(false);
+  const micBtn = useRef<HTMLButtonElement>(null);
+  const closeCheck = useCallback(() => {
+    setChecking(false);
+    window.setTimeout(() => micBtn.current?.focus(), 0);
+  }, []);
   const [typing, setTyping] = useState(!voiceAvailable());
   const [entry, setEntryState] = useState('');
   const entryRef = useRef('');
@@ -139,7 +145,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
           s.queue = [...s.queue, { ...p, comeback: true }];
           setQueue(s.queue);
         }
-        setFlash({ text: `${p.a} − ${p.b} is ${p.answer}. It’ll come back!`, tone: 'soft' });
+        setFlash({ text: `${p.a} ${OP_INFO[p.op].sym} ${p.b} is ${p.answer}. It’ll come back!`, tone: 'soft' });
         later(advance, 2400);
       } else {
         setFlash({ text: via === 'voice' ? `I heard ${val}. Try again!` : 'Not that one. Try again!', tone: 'soft' });
@@ -161,7 +167,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
       if (!s.firstHeardAt && alts.some((n) => n.length > 0)) s.firstHeardAt = performance.now();
       // Reading the problem out loud ("thirteen minus seven", or a pause after "thirteen") isn't an answer.
       const readingIt = (nums: number[]) =>
-        (nums.length >= 2 && nums[nums.length - 2] === p.a && nums[nums.length - 1] === p.b) || (nums.length === 1 && nums[0] === p.a);
+        (nums.length >= 2 && nums[nums.length - 2] === p.a && nums[nums.length - 1] === p.b) || (nums.length === 1 && nums[0] === p.a && p.answer !== p.a);
       if (alts.some((nums) => nums.length > 0 && nums[nums.length - 1] === p.answer && !readingIt(nums))) {
         resolve(p.answer, 'voice');
         return;
@@ -209,7 +215,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
       setMic('blocked');
       setTyping(true);
       setFlash({ text: 'The mic didn’t start. Type your answers instead!', tone: 'soft' });
-    }, 6000);
+    }, 15000);
   };
 
   const start = () => {
@@ -238,7 +244,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
       return;
     }
     if (k === 'del') setEntry((e) => e.slice(0, -1));
-    else setEntry((e) => (e.length >= 2 ? e : e === '0' ? k : e + k));
+    else setEntry((e) => (e.length >= 3 ? e : e === '0' ? k : e + k));
     sfx.key();
   };
 
@@ -294,7 +300,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
                       }}
                     >
                       <b>{n}</b>
-                      <small>{bests[String(n)] ? fmtTime(bests[String(n)]) : 'no record'}</small>
+                      <small>{bests[bestKey(op, n)] ? fmtTime(bests[bestKey(op, n)]) : 'no record'}</small>
                     </button>
                   ))}
                 </div>
@@ -315,11 +321,11 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
                 )}
               </div>
               {!problem && !typing && (
-                <button className="help-btn mic-test-btn" onClick={() => setChecking(true)}>
+                <button className="help-btn mic-test-btn" ref={micBtn} onClick={() => setChecking(true)}>
                   Test the mic
                 </button>
               )}
-              {checking && <MicCheck onClose={() => setChecking(false)} />}
+              {checking && <MicCheck onClose={closeCheck} />}
             </>
           )}
         </div>
@@ -370,7 +376,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
           <div className="eq" aria-live="polite">
             {[
               <span key="a">{p.a}</span>,
-              <span key="o" className="op">−</span>,
+              <span key="o" className="op">{OP_INFO[p.op].sym}</span>,
               <span key="b">{p.b}</span>,
               <span key="e" className="op">=</span>,
               <span key="x" className={`answer ${entry ? 'filled' : ''} ${snatch ? 'taken' : ''}`}>

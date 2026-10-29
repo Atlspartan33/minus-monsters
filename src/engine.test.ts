@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { CORE, FLUENT_BOX, TEENS, bossProblem, buildLightning, buildRound, keyOf, record, type Settings, type Stats } from './engine';
+import {
+  CORE,
+  FLUENT_BOX,
+  TEENS,
+  bossProblem,
+  buildLightning,
+  buildRound,
+  factLabel,
+  factPool,
+  factsInTier,
+  keyOf,
+  parseKey,
+  record,
+  unlockedTiers,
+  type Settings,
+  type Stats,
+} from './engine';
 import { parseNumbers } from './voice';
 
-const settings: Settings = { roundLen: 12, boss: 'auto', sound: false, readAloud: false, lightningLen: 15 };
+const settings: Settings = { roundLen: 12, boss: 'auto', sound: false, readAloud: false, lightningLen: 15, op: 'sub', ops: ['sub', 'add', 'mul', 'div'] };
 
 // Small seeded RNG so failures reproduce.
 function rng(seed: number) {
@@ -62,7 +78,7 @@ describe('bossProblem', () => {
 });
 
 describe('record', () => {
-  const p = { a: 13, b: 7, c: 6, answer: 6, kind: 'diff' as const, tier: 3 as const, key: '13-7', boss: false };
+  const p = { op: 'sub' as const, a: 13, b: 7, c: 6, answer: 6, kind: 'diff' as const, tier: 3 as const, key: '13-7', boss: false };
   it('only fast, clean answers climb the ladder', () => {
     let s = record({}, p, { firstTry: true, usedHelp: false, ms: 2000 });
     expect(s['13-7'].box).toBe(1);
@@ -86,6 +102,9 @@ describe('parseNumbers', () => {
     ['6', [6]],
     ['six', [6]],
     ['twenty five', [25]],
+    ['one hundred', [100]],
+    ['hundred', [100]],
+    ['forty two divided by seven is six', [42, 7, 6]],
     ['it is 8', [8]],
     ['ate', [8]],
     ['for', [4]],
@@ -96,5 +115,81 @@ describe('parseNumbers', () => {
     ['um nine', [9]],
   ])('%s → %j', (text, nums) => {
     expect(parseNumbers(text)).toEqual(nums);
+  });
+});
+
+describe('the other tracks', () => {
+  const ops = ['add', 'mul', 'div'] as const;
+  it('every track builds valid full rounds for any history', () => {
+    for (const op of ops) {
+      for (let seed = 1; seed <= 400; seed++) {
+        const r = rng(seed);
+        const stats: Stats = {};
+        for (const [a, b] of factPool(op)) {
+          if (r() < 0.4) continue;
+          stats[keyOf(a, b, op)] = { seen: 3, right: 2, fast: 1, box: Math.floor(r() * 5), misses: Math.floor(r() * 3), lastMs: 3000, lastAt: 0 };
+        }
+        const round = buildRound(stats, { ...settings, op }, Math.floor(r() * 20), r);
+        expect(round.length).toBe(12);
+        for (const p of round) {
+          expect(p.op).toBe(op);
+          const c = op === 'add' ? p.a + p.b : op === 'mul' ? p.a * p.b : p.a / p.b;
+          expect(p.c).toBe(c);
+          expect(Number.isInteger(p.c) && p.c >= 1).toBe(true);
+          expect(p.answer).toBe(p.kind === 'diff' ? p.c : p.b);
+        }
+        expect(round.filter((p) => p.mini).length).toBe(1);
+        expect(buildLightning(stats, { ...settings, op, lightningLen: 20 }, r).every((p) => p.op === op && p.kind === 'diff')).toBe(true);
+      }
+    }
+  });
+
+  it('a new times player only gets the friendly tables', () => {
+    const round = buildRound({}, { ...settings, op: 'mul', boss: 'off' }, 0, rng(5));
+    expect(round.every((p) => p.tier === 1)).toBe(true);
+    expect(unlockedTiers({}, 'mul')).toEqual([1]);
+  });
+
+  it('times opens the next tables once the friendly ones are fluent', () => {
+    const stats: Stats = {};
+    for (const [a, b] of factsInTier(1, 'mul')) stats[keyOf(a, b, 'mul')] = { seen: 3, right: 3, fast: 3, box: 3, misses: 0, lastMs: 1000, lastAt: 0 };
+    expect(unlockedTiers(stats, 'mul')).toEqual([1, 2]);
+  });
+
+  it('boss bites stay in range on every track', () => {
+    const r = rng(19);
+    for (let i = 0; i < 2000; i++) {
+      const add = bossProblem(i % 2 ? 'borrow' : 'noborrow', 0, r, 'add');
+      expect(add.c).toBeLessThanOrEqual(99);
+      expect(add.b).toBeGreaterThanOrEqual(10);
+      expect(add.tier).toBe(i % 2 ? 5 : 4);
+      const mul = bossProblem('auto', 0, r, 'mul');
+      expect(mul.c).toBeLessThanOrEqual(90);
+      const div = bossProblem('auto', 0, r, 'div');
+      expect(Number.isInteger(div.c) && div.c >= 10).toBe(true);
+    }
+  });
+
+  it('keys round-trip and old subtraction keys still read', () => {
+    expect(keyOf(13, 7)).toBe('13-7');
+    expect(factLabel('13-7')).toBe('13 − 7');
+    expect(factLabel(keyOf(6, 7, 'mul'))).toBe('6 × 7');
+    expect(factLabel(keyOf(42, 7, 'div'))).toBe('42 ÷ 7');
+    expect(parseKey(keyOf(8, 5, 'add'))).toEqual({ op: 'add', a: 8, b: 5 });
+  });
+});
+
+describe('round shape', () => {
+  it('the two boss bites differ and a new player gets a meaty mini boss', () => {
+    for (const op of ['sub', 'add', 'mul', 'div'] as const) {
+      for (let seed = 1; seed <= 200; seed++) {
+        const round = buildRound({}, { ...settings, op }, 0, rng(seed));
+        const [b1, b2] = round.filter((p) => p.boss);
+        expect(b1.key).not.toBe(b2.key);
+        const mini = round.find((p) => p.mini)!;
+        expect(mini.c).toBeGreaterThan(1);
+        if (op === 'mul') expect(Math.min(mini.a, mini.b)).toBeGreaterThan(1);
+      }
+    }
   });
 });

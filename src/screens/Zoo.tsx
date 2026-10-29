@@ -1,10 +1,23 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MONSTERS, Monster } from '../monsters';
 import { sfx } from '../sound';
 import { MAX_CUSTOM, pendingPrizes, STOP_EVERY, trailStops, type Save } from '../store';
 
 export function Zoo({ save, onOpen, onMake, onBack }: { save: Save; onOpen: (id: string) => void; onMake: () => void; onBack: () => void }) {
   const [toast, setToast] = useState<string | null>(null);
+  const [party, setParty] = useState(0);
+  const partyTimers = useRef<number[]>([]);
+  useEffect(() => () => partyTimers.current.forEach(clearTimeout), []);
+  const danceParty = () => {
+    partyTimers.current.forEach(clearTimeout);
+    const id = Date.now();
+    setParty(id);
+    sfx.dance();
+    partyTimers.current = [
+      window.setTimeout(() => sfx.dance(), 1920),
+      window.setTimeout(() => setParty((p) => (p === id ? 0 : p)), 1920 * 2),
+    ];
+  };
   const timer = useRef<number | undefined>(undefined);
   const nextEgg = trailStops(save, save.claimed + 1, 8).find((s) => s.kind === 'egg');
 
@@ -28,6 +41,14 @@ export function Zoo({ save, onOpen, onMake, onBack }: { save: Save; onOpen: (id:
         </span>
       </header>
       <p className="zoo-hint">Tap a monster to dress it up or feed it next. Eggs on the Snack Trail hatch the rest.</p>
+      <button className="dance-btn party-btn" onClick={danceParty} disabled={party > 0}>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+          <circle cx="6.5" cy="18" r="2.8" fill="currentColor" />
+          <circle cx="17.5" cy="16" r="2.8" fill="currentColor" />
+        </svg>
+        Dance party!
+      </button>
       <h3 className="zoo-section">Homemade monsters</h3>
       <div className="zoo-grid">
         {save.customs.map((m, i) => {
@@ -35,8 +56,8 @@ export function Zoo({ save, onOpen, onMake, onBack }: { save: Save; onOpen: (id:
           return (
             <button
               key={m.id}
-              className={`zoo-card ${cur ? 'current' : ''}`}
-              style={{ ['--d' as string]: `${i * 40}ms` }}
+              className={`zoo-card ${cur ? 'current' : ''} ${party ? 'dancing' : ''}`}
+              style={{ ['--d' as string]: `${i * 40}ms`, ['--beat' as string]: `${(i % 4) * 120}ms` }}
               onClick={() => {
                 sfx.boing();
                 onOpen(m.id);
@@ -68,8 +89,8 @@ export function Zoo({ save, onOpen, onMake, onBack }: { save: Save; onOpen: (id:
           return (
             <button
               key={m.id}
-              className={`zoo-card ${cur ? 'current' : ''} ${owned ? '' : 'locked'}`}
-              style={{ ['--d' as string]: `${i * 40}ms` }}
+              className={`zoo-card ${cur ? 'current' : ''} ${owned ? (party ? 'dancing' : '') : 'locked'}`}
+              style={{ ['--d' as string]: `${i * 40}ms`, ['--beat' as string]: `${(i % 4) * 120}ms` }}
               aria-disabled={!owned}
               onClick={() => {
                 if (owned) {
