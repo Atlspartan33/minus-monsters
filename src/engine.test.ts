@@ -18,7 +18,7 @@ import {
 } from './engine';
 import { parseNumbers } from './voice';
 
-const settings: Settings = { roundLen: 12, boss: 'auto', sound: false, readAloud: false, lightningLen: 15, op: 'sub', ops: ['sub', 'add', 'mul', 'div'] };
+const settings: Settings = { roundLen: 12, boss: 'auto', sound: false, readAloud: false, lightningLen: 15, voice: true, op: 'sub', ops: ['sub', 'add', 'mul', 'div'] };
 
 // Small seeded RNG so failures reproduce.
 function rng(seed: number) {
@@ -113,6 +113,10 @@ describe('parseNumbers', () => {
     ['I ate it', []],
     ['thirteen minus seven', [13, 7]],
     ['um nine', [9]],
+    ['Kevin', [7]],
+    ['8th', [8]],
+    ['fine', [5]],
+    ['then I said it', []],
   ])('%s → %j', (text, nums) => {
     expect(parseNumbers(text)).toEqual(nums);
   });

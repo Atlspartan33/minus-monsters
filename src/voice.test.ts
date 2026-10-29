@@ -83,6 +83,17 @@ describe('createListener on Android-style recognizers', () => {
     expect(heard.map((h) => h.text)).toEqual(['fi', 'nine']);
   });
 
+  it('a phrase that ends without going final still counts', async () => {
+    const heard: Heard[] = [];
+    const l = createListener((h) => heard.push(h), () => {})!;
+    l.start();
+    await vi.advanceTimersByTimeAsync(50);
+    live().say('seven', false);
+    live().abort(); // Android ends the session with no final result
+    await vi.advanceTimersByTimeAsync(20);
+    expect(heard.at(-1)).toMatchObject({ text: 'seven', final: true, alts: [[7]] });
+  });
+
   it('revives a session that silently died', async () => {
     const heard: Heard[] = [];
     const l = createListener((h) => heard.push(h), () => {})!;

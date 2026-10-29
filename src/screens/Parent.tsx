@@ -286,6 +286,10 @@ export function Parent({ save, onSettings, onReset, onBack }: Props) {
           <input type="checkbox" checked={st.readAloud} onChange={(e) => set({ readAloud: e.target.checked })} />
           <span>Read each problem out loud automatically</span>
         </label>
+        <label className="toggle">
+          <input type="checkbox" checked={st.voice} onChange={(e) => set({ voice: e.target.checked })} />
+          <span>Lightning Round: answer out loud (off = typing only)</span>
+        </label>
         <button
           className="btn danger"
           onClick={() => {

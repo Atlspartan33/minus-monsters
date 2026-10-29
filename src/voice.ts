@@ -31,12 +31,18 @@ export const voiceProblem = () =>
 const WORDS: Record<string, number> = {
   zero: 0, one: 1, won: 1, two: 2, to: 2, too: 2, three: 3, tree: 3, free: 3, four: 4, for: 4, fore: 4, five: 5,
   six: 6, sicks: 6, sics: 6, sex: 6, seven: 7, eight: 8, ate: 8, nine: 9, nein: 9, ten: 10, tin: 10,
+  // Sound-alikes a child's short answer often comes back as.
+  tu: 2, tue: 2, fur: 4, fine: 5, hive: 5, sticks: 6, kevin: 7, heaven: 7, hate: 8, eat: 8, mine: 9, line: 9, tan: 10, then: 10,
+  third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10,
   eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
   twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
 };
 
 // Sound-alikes only count when they're the whole utterance ("ate!"), not inside a sentence ("I ate it").
-const HOMOPHONES = new Set(['won', 'to', 'too', 'tree', 'free', 'for', 'fore', 'sicks', 'sics', 'sex', 'ate', 'nein', 'tin']);
+const HOMOPHONES = new Set([
+  'won', 'to', 'too', 'tree', 'free', 'for', 'fore', 'sicks', 'sics', 'sex', 'ate', 'nein', 'tin',
+  'tu', 'tue', 'fur', 'fine', 'hive', 'sticks', 'kevin', 'heaven', 'hate', 'eat', 'mine', 'line', 'tan', 'then',
+]);
 
 export function parseNumbers(text: string): number[] {
   const tokens = text.toLowerCase().replace(/-/g, ' ').match(/[a-z]+|\d+/g) ?? [];
@@ -98,6 +104,7 @@ export function createListener(
   let sid = 0; // session counter
   let staleSid = -1; // a session whose speech belongs to the previous problem
   let heardInSession = false;
+  let pending: Heard | null = null; // latest guess of this session that hasn't been made final
   let started = false; // the open session has fired onstart
   let everStarted = false; // the first start may sit behind Chrome's mic permission prompt
   let openedAt = 0;
@@ -140,7 +147,9 @@ export function createListener(
         const alts: number[][] = [];
         for (let j = 0; j < res.length; j++) alts.push(parseNumbers(res[j].transcript));
         log(`${res.isFinal ? 'heard' : 'hearing'}: ${res[0]?.transcript ?? ''}`);
-        onHeard({ text: res[0]?.transcript ?? '', alts, final: res.isFinal });
+        const h = { text: res[0]?.transcript ?? '', alts, final: res.isFinal };
+        pending = h.final ? null : h;
+        onHeard(h);
       }
     };
     x.onerror = (e) => {
@@ -159,6 +168,13 @@ export function createListener(
       if (x !== r) return;
       running = false;
       log('end');
+      // Android sometimes ends a short phrase without ever marking it final; its last guess is the answer.
+      const last = pending;
+      pending = null;
+      if (last && want && sid !== staleSid) {
+        log(`heard (unfinished): ${last.text}`);
+        onHeard({ ...last, final: true });
+      }
       if (want) queue(120);
       else if (!dead) onState('idle');
     };
@@ -191,6 +207,7 @@ export function createListener(
     r ??= make();
     sid++;
     heardInSession = false;
+    pending = null;
     started = false;
     openedAt = lastEvent = Date.now();
     try {

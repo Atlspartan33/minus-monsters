@@ -55,7 +55,7 @@ export const fresh = (): Save => ({
   bossWins: 0,
   rounds: [],
   lightning: { bests: {}, runs: 0 },
-  settings: { roundLen: 12, boss: 'auto', sound: true, readAloud: false, lightningLen: 15, op: 'sub', ops: ['sub', 'add', 'mul', 'div'] },
+  settings: { roundLen: 12, boss: 'auto', sound: true, readAloud: false, lightningLen: 15, voice: true, op: 'sub', ops: ['sub', 'add', 'mul', 'div'] },
 });
 
 type Legacy = Partial<Save> & { egg?: number; lightning?: { best?: number | null; bests?: Record<string, number>; runs?: number } };

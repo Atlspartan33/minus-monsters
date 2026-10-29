@@ -49,6 +49,8 @@ export interface Settings {
   sound: boolean;
   readAloud: boolean;
   lightningLen: number;
+  /** Lightning Round listens for spoken answers. */
+  voice: boolean;
   /** The track she's playing. */
   op: Op;
   /** Tracks a grown-up has switched on. */

@@ -23,6 +23,8 @@ interface Props {
   onAnswer: (p: Problem, at: Attempt, stars: number) => void;
   onFinish: (results: Result[], totalMs: number) => void;
   onQuit: () => void;
+  /** A grown-up can switch spoken answers off. */
+  voiceOn: boolean;
 }
 
 type Flash = { text: string; tone: 'good' | 'great' | 'soft' };
@@ -33,10 +35,11 @@ export const fmtTime = (ms: number) => {
   return `${m}:${(s - m * 60).toFixed(1).padStart(4, '0')}`;
 };
 
-export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, onQuit }: Props) {
+export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, onQuit, voiceOn }: Props) {
   const op = round[0]?.op ?? 'sub';
   const best = bests[bestKey(op, round.length)] ?? null;
-  const problem = voiceProblem();
+  const problem = voiceOn ? voiceProblem() : null;
+  const canTalk = voiceOn && voiceAvailable();
   const [phase, setPhase] = useState<'ready' | 'count' | 'go'>('ready');
   const [count, setCount] = useState(3);
   const [queue, setQueue] = useState(round);
@@ -51,7 +54,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
     setChecking(false);
     window.setTimeout(() => micBtn.current?.focus(), 0);
   }, []);
-  const [typing, setTyping] = useState(!voiceAvailable());
+  const [typing, setTyping] = useState(!canTalk);
   const [entry, setEntryState] = useState('');
   const entryRef = useRef('');
   const setEntry = (v: string | ((e: string) => string)) => {
@@ -61,7 +64,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
   const [snatch, setSnatch] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [stars, setStars] = useState(0);
-  const g = useRef({ idx: 0, queue: round, tries: 0, busy: true, shownAt: 0, firstHeardAt: 0, startAt: 0, results: [] as Result[], done: false });
+  const g = useRef({ idx: 0, queue: round, tries: 0, misheard: 0, busy: true, shownAt: 0, firstHeardAt: 0, startAt: 0, results: [] as Result[], done: false });
   const listener = useRef<Listener | null>(null);
   const micOn = useRef(false);
   const timers = useRef<number[]>([]);
@@ -87,6 +90,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
     const s = g.current;
     s.idx = i;
     s.tries = 0;
+    s.misheard = 0;
     s.busy = false;
     s.shownAt = performance.now();
     s.firstHeardAt = 0;
@@ -133,11 +137,13 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
         later(advance, 850);
         return;
       }
-      s.tries++;
-      sfx.oops();
-      setMood('confused');
-      // Mishearings happen, so a spoken answer gets one extra try.
-      if (s.tries >= (via === 'voice' ? 3 : 2)) {
+      if (via === 'voice') s.misheard++;
+      else {
+        s.tries++;
+        sfx.oops();
+        setMood('confused');
+      }
+      if (s.tries >= 2 || s.misheard >= 3) {
         // Show the whole fact, then bring it back at the end of the round.
         s.busy = true;
         onAnswer(p, { firstTry: false, usedHelp: true, ms: now - s.shownAt, voice: via === 'voice' }, 0);
@@ -148,8 +154,8 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
         setFlash({ text: `${p.a} ${OP_INFO[p.op].sym} ${p.b} is ${p.answer}. It’ll come back!`, tone: 'soft' });
         later(advance, 2400);
       } else {
-        setFlash({ text: via === 'voice' ? `I heard ${val}. Try again!` : 'Not that one. Try again!', tone: 'soft' });
-        later(() => setMood('open'), 800);
+        setFlash({ text: via === 'voice' ? `Did you say ${val}? Say it again!` : 'Not that one. Try again!', tone: 'soft' });
+        if (via === 'type') later(() => setMood('open'), 800);
       }
     },
     [advance, onAnswer],
@@ -161,14 +167,16 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
       if (s.busy || s.done) return;
       setHeard(h.text);
       const p = s.queue[s.idx];
-      // Interim results are guesses: trust only the top one until it's final.
-      const alts = h.final ? h.alts : h.alts.slice(0, 1);
+      // Every guess the recognizer makes is checked against the answer we already know.
+      const alts = h.alts;
       // The clock stops when she starts saying a number, not at any noise (TJ, the TV).
       if (!s.firstHeardAt && alts.some((n) => n.length > 0)) s.firstHeardAt = performance.now();
+      // "8" can come back doubled as "88".
+      const says = (n: number | undefined) => n === p.answer || (n !== undefined && p.answer < 10 && n === p.answer * 11);
       // Reading the problem out loud ("thirteen minus seven", or a pause after "thirteen") isn't an answer.
       const readingIt = (nums: number[]) =>
         (nums.length >= 2 && nums[nums.length - 2] === p.a && nums[nums.length - 1] === p.b) || (nums.length === 1 && nums[0] === p.a && p.answer !== p.a);
-      if (alts.some((nums) => nums.length > 0 && nums[nums.length - 1] === p.answer && !readingIt(nums))) {
+      if (alts.some((nums) => says(nums[nums.length - 1]) && !readingIt(nums))) {
         resolve(p.answer, 'voice');
         return;
       }
@@ -449,7 +457,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
                 FEED
               </button>
             </div>
-            {mic !== 'blocked' && voiceAvailable() && (
+            {mic !== 'blocked' && canTalk && (
               <button
                 className="help-btn"
                 onClick={() => {

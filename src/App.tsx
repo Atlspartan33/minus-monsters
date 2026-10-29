@@ -190,6 +190,7 @@ export default function App() {
             onAnswer={onAnswer}
             onFinish={onFinish}
             onQuit={home}
+            voiceOn={save.settings.voice}
           />
         )}
         {screen.k === 'end' && (
