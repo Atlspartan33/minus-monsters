@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@fontsource/fredoka": "^5.2.8",
+    "kid-voice": "file:../kid-voice",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

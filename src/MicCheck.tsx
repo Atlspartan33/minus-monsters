@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { sfx } from './sound';
-import { createListener, type MicState } from './voice';
+import { createListener, modelStatus, type Engine, type MicState } from 'kid-voice';
 
 // Say any number and see what the tablet heard. The event log underneath is for grown-ups:
 // it shows where voice breaks (no "start", no "sound", or sound but no words).
@@ -9,13 +9,14 @@ export function MicCheck({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState('');
   const [got, setGot] = useState<number | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [engine, setEngine] = useState<Engine | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
     let gone = false; // a stopped listener's last "idle" mustn't overwrite the live one
-    const l = createListener(
-      (h) => {
+    const l = createListener({
+      onHeard: (h) => {
         if (gone) return;
         setText(h.text);
         const n = h.alts.flat().at(-1);
@@ -24,9 +25,13 @@ export function MicCheck({ onClose }: { onClose: () => void }) {
           sfx.chomp();
         }
       },
-      (st) => !gone && setState(st),
-      (ev) => !gone && setLog((xs) => [...xs.slice(-5), ev]),
-    );
+      onState: (st) => {
+        if (gone) return;
+        setState(st);
+        setEngine(l?.engine ?? null);
+      },
+      onLog: (ev) => !gone && setLog((xs) => [...xs.slice(-5), ev]),
+    });
     l?.start();
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -43,7 +48,11 @@ export function MicCheck({ onClose }: { onClose: () => void }) {
       : state === 'blocked'
         ? 'The mic is blocked. Turn on Microphone for this site in Chrome.'
         : state === 'offline'
-          ? 'Voice needs internet and Google speech on this tablet.'
+          ? 'Voice can’t start on this tablet. Type instead.'
+          : state === 'loading'
+            ? modelStatus() === 'loading'
+              ? 'Getting my ears ready… (first time only, about a minute)'
+              : 'Starting the mic…'
           : state === 'hearing'
             ? 'I hear you…'
             : state === 'listening'
@@ -61,6 +70,7 @@ export function MicCheck({ onClose }: { onClose: () => void }) {
       </div>
       <p className="heard mic-heard">{text ? `“${text}”` : ' '}</p>
       <p className="mic-log" aria-label="Mic events">
+        {engine && <b>{engine === 'offline' ? 'Listening on this tablet' : 'Using Chrome speech'} · </b>}
         {log.length ? log.join(' · ') : 'waiting for the mic…'}
       </p>
       <button ref={closeRef} className="btn primary mic-done" onClick={onClose}>

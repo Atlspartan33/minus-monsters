@@ -16,7 +16,7 @@ import {
   type Settings,
   type Stats,
 } from './engine';
-import { parseNumbers } from './voice';
+import { parseNumbers } from 'kid-voice';
 
 const settings: Settings = { roundLen: 12, boss: 'auto', sound: false, readAloud: false, lightningLen: 15, voice: true, op: 'sub', ops: ['sub', 'add', 'mul', 'div'] };
 

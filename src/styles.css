@@ -1173,7 +1173,7 @@ button:disabled {
   min-height: 44px;
   padding: 6px 16px;
   border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   background: transparent;
 }
 .seg button[aria-pressed='true'] {
@@ -1552,6 +1552,7 @@ button:disabled {
   height: 18px;
   border-radius: 50%;
   background: #8a7fae;
+  box-shadow: 0 0 0 2px #fff; /* the dot's colour isn't the only signal, but it should still be seen */
 }
 .mic.listening .mic-dot {
   background: #ff4d6d;

@@ -518,3 +518,28 @@
 .home-actions {
   gap: 10px;
 }
+
+/* ---------- Lightning: waiting for the mic before the countdown ---------- */
+.warm-up {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.warm-up .monster-wrap {
+  animation: warm-bob 1.2s ease-in-out infinite;
+}
+@keyframes warm-bob {
+  50% {
+    transform: translateY(-8px) rotate(-3deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .warm-up .monster-wrap {
+    animation: none;
+  }
+}
+.mic-log b {
+  font-weight: 700;
+}

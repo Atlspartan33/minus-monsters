@@ -11,6 +11,7 @@ import { Play, type Result } from './screens/Play';
 import { RoundEnd } from './screens/RoundEnd';
 import { Wardrobe } from './screens/Wardrobe';
 import { Zoo } from './screens/Zoo';
+import { prepareVoice } from 'kid-voice';
 import { setSound } from './sound';
 import { MAX_CUSTOM, claimPrize, fresh, pendingPrizes, useSave, type Prize } from './store';
 
@@ -43,6 +44,12 @@ export default function App() {
   useEffect(() => {
     setSound(save.settings.sound);
   }, [save.settings.sound]);
+  // Fetch the offline voice model in the background, so the first Lightning Round doesn't wait.
+  useEffect(() => {
+    if (!save.settings.voice) return;
+    const t = window.setTimeout(() => void prepareVoice(), 3000);
+    return () => clearTimeout(t);
+  }, [save.settings.voice]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen.k]);

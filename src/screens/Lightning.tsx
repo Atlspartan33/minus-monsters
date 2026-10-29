@@ -4,7 +4,7 @@ import { LIGHTNING_LENGTHS } from '../store';
 import { OP_INFO, VOICE_FAST_MS, bestKey, isSpeedy, type Attempt, type Problem } from '../engine';
 import { Monster, type MonsterDef, type Mood } from '../monsters';
 import { sfx, warm } from '../sound';
-import { createListener, voiceAvailable, voiceProblem, type Heard, type Listener } from '../voice';
+import { createListener, modelStatus, voiceAvailable, voiceProblem, watchModel, type Heard, type Listener } from 'kid-voice';
 import { MicCheck } from '../MicCheck';
 import { Star, type Result } from './Play';
 
@@ -40,7 +40,8 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
   const best = bests[bestKey(op, round.length)] ?? null;
   const problem = voiceOn ? voiceProblem() : null;
   const canTalk = voiceOn && voiceAvailable();
-  const [phase, setPhase] = useState<'ready' | 'count' | 'go'>('ready');
+  // 'warm' waits for the mic to be listening before the countdown, so the clock never runs on a deaf mic.
+  const [phase, setPhase] = useState<'ready' | 'warm' | 'count' | 'go'>('ready');
   const [count, setCount] = useState(3);
   const [queue, setQueue] = useState(round);
   const [idx, setIdx] = useState(0);
@@ -67,6 +68,12 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
   const g = useRef({ idx: 0, queue: round, tries: 0, misheard: 0, busy: true, shownAt: 0, firstHeardAt: 0, startAt: 0, results: [] as Result[], done: false });
   const listener = useRef<Listener | null>(null);
   const micOn = useRef(false);
+  const micLoading = useRef(false);
+  const warming = useRef(false);
+  const micFail = useRef<string | null>(null); // why the mic gave up, kept on screen into the round
+  const [modelSt, setModelSt] = useState(modelStatus);
+  useEffect(() => watchModel(setModelSt), []);
+  const [slowMic, setSlowMic] = useState(false);
   const timers = useRef<number[]>([]);
   const later = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
 
@@ -100,7 +107,9 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
     setHeard('');
     setEntry('');
     setSnatch(false);
-    setFlash(null);
+    const note = i === 0 ? micFail.current : null;
+    micFail.current = null;
+    setFlash(note ? { text: note, tone: 'soft' } : null);
   }, []);
 
   const advance = useCallback(() => {
@@ -194,41 +203,48 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
 
   const heardRef = useRef(onHeard);
   heardRef.current = onHeard;
+  // The mic gave up: say why (seen and heard), switch to the keypad, and don't hold the round.
+  const micFailed = (text: string) => {
+    const l = listener.current;
+    listener.current = null;
+    l?.stop();
+    setMic('blocked');
+    setTyping(true);
+    sfx.oops();
+    micFail.current = text;
+    setFlash({ text, tone: 'soft' });
+    countdownIfWarming();
+  };
+
   const listen = () => {
     if (listener.current) return;
-    listener.current = createListener(
-      (h) => heardRef.current(h),
-      (st) => {
+    listener.current = createListener({
+      onHeard: (h) => heardRef.current(h),
+      onState: (st) => {
+        micLoading.current = st === 'loading';
         if (st === 'blocked' || st === 'offline') {
-          listener.current = null;
-          setMic('blocked');
-          setTyping(true);
-          setFlash({
-            text: st === 'offline' ? 'The mic needs internet. Type your answers instead!' : 'The mic is off. Type your answers instead!',
-            tone: 'soft',
-          });
+          micFailed(st === 'offline' ? 'The mic can’t start here. Type your answers instead!' : 'The mic is off. Type your answers instead!');
         } else {
           micOn.current = st === 'listening' || st === 'hearing';
           setMic(st === 'listening' || st === 'hearing' ? st : 'off');
+          if (micOn.current) countdownIfWarming();
         }
       },
-    );
+    });
     micOn.current = false;
-    listener.current?.start();
-    // A recognizer that never starts would leave "Starting the mic…" up forever.
-    later(() => {
+    if (!listener.current) return micFailed('This tablet can’t hear answers. Type them instead!');
+    listener.current.start();
+    // A recognizer that never starts would leave "Starting the mic…" up forever. A first-time
+    // model download is still progress, so it gets more time (the model has its own timeout).
+    const check = () => {
       if (!listener.current || micOn.current) return;
-      listener.current.stop();
-      listener.current = null;
-      setMic('blocked');
-      setTyping(true);
-      setFlash({ text: 'The mic didn’t start. Type your answers instead!', tone: 'soft' });
-    }, 15000);
+      if (micLoading.current && modelStatus() === 'loading') return later(check, 5000);
+      micFailed('The mic didn’t start. Type your answers instead!');
+    };
+    later(check, 15000);
   };
 
-  const start = () => {
-    warm();
-    if (!typing) listen();
+  const countdown = () => {
     setPhase('count');
     [3, 2, 1].forEach((n, i) =>
       later(() => {
@@ -242,6 +258,24 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
       setPhase('go');
       show(0);
     }, 2100);
+  };
+  const countdownRef = useRef(countdown);
+  countdownRef.current = countdown;
+  function countdownIfWarming() {
+    if (!warming.current) return;
+    warming.current = false;
+    countdownRef.current();
+  }
+
+  const start = () => {
+    warm();
+    if (typing) return countdown();
+    warming.current = true;
+    setSlowMic(false);
+    setPhase('warm');
+    // Waiting a while usually means the tablet is asking permission: say what to tap.
+    later(() => warming.current && setSlowMic(true), 4000);
+    listen();
   };
 
   const press = (k: string) => {
@@ -271,7 +305,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
   if (phase !== 'go') {
     return (
       <main className="lightning ready">
-        <header className="sub-top">
+        <header className="sub-top" inert={checking || undefined}>
           <button className="icon-btn" onClick={onQuit} aria-label="Back to home">
             <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
               <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
@@ -282,10 +316,36 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
           </h2>
           <span />
         </header>
-        <div className="ready-body">
+        <div className="ready-body" inert={checking || undefined}>
           {phase === 'count' ? (
             <div className="countdown" key={count} aria-live="assertive">
               {count}
+            </div>
+          ) : phase === 'warm' ? (
+            <div className="warm-up" role="status">
+              <div className="monster-wrap mood-idle">
+                <div className="monster big">
+                  <Monster m={m} mood="happy" outfit={outfit} />
+                </div>
+              </div>
+              <p className="ready-line">{modelSt === 'loading' ? 'Getting my ears ready…' : 'Turning on my ears…'}</p>
+              {modelSt === 'loading' ? (
+                <p className="ready-note">The first time takes about a minute. After that it’s instant, even offline.</p>
+              ) : (
+                slowMic && <p className="ready-note">If the tablet asks about the microphone, tap Allow.</p>
+              )}
+              <button
+                className="btn secondary"
+                onClick={() => {
+                  listener.current?.stop();
+                  listener.current = null;
+                  setMic('off');
+                  setTyping(true);
+                  countdownIfWarming();
+                }}
+              >
+                Type instead
+              </button>
             </div>
           ) : (
             <>
@@ -322,21 +382,21 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
                 <button className="btn primary" onClick={start}>
                   {typing ? 'Start (typing)' : 'Start'}
                 </button>
-                {!problem && (
+                {canTalk && !problem && (
                   <button className="btn secondary" onClick={() => setTyping((t) => !t)}>
                     {typing ? 'Use my voice instead' : 'Type instead'}
                   </button>
                 )}
               </div>
-              {!problem && !typing && (
+              {canTalk && !problem && !typing && (
                 <button className="help-btn mic-test-btn" ref={micBtn} onClick={() => setChecking(true)}>
                   Test the mic
                 </button>
               )}
-              {checking && <MicCheck onClose={closeCheck} />}
             </>
           )}
         </div>
+        {checking && <MicCheck onClose={closeCheck} />}
       </main>
     );
   }

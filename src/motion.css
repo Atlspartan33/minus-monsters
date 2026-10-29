@@ -797,6 +797,14 @@
   justify-content: center;
   gap: 0;
 }
+.len-seg button[aria-checked='true'] {
+  background: var(--lime);
+  color: var(--ink);
+  border-color: var(--lime);
+}
+.len-seg button[aria-checked='true'] small {
+  color: var(--ink);
+}
 .len-seg b {
   font-size: 1.5rem;
   line-height: 1.1;

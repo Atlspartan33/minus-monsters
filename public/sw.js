@@ -11,7 +11,9 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (url.pathname.includes('/voice/')) return; // the 41 MB voice model; kid-voice stores it itself
   if (req.mode === 'navigate') {
     e.respondWith(
       fetch(req)
