@@ -5,6 +5,7 @@ import { VOICE_FAST_MS, isSpeedy, type Attempt, type Problem } from '../engine';
 import { Monster, type MonsterDef, type Mood } from '../monsters';
 import { sfx, warm } from '../sound';
 import { createListener, voiceAvailable, voiceProblem, type Heard, type Listener } from '../voice';
+import { MicCheck } from '../MicCheck';
 import { Star, type Result } from './Play';
 
 // Lightning Round: say the answer before the cookie rolls into the monster's mouth.
@@ -42,7 +43,8 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
   const [mood, setMood] = useState<Mood>('open');
   const [flash, setFlash] = useState<Flash | null>(null);
   const [heard, setHeard] = useState('');
-  const [mic, setMic] = useState<'off' | 'listening' | 'blocked'>('off');
+  const [mic, setMic] = useState<'off' | 'listening' | 'hearing' | 'blocked'>('off');
+  const [checking, setChecking] = useState(false);
   const [typing, setTyping] = useState(!voiceAvailable());
   const [entry, setEntryState] = useState('');
   const entryRef = useRef('');
@@ -192,8 +194,8 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
             tone: 'soft',
           });
         } else {
-          micOn.current = st === 'listening';
-          setMic(micOn.current ? 'listening' : 'off');
+          micOn.current = st === 'listening' || st === 'hearing';
+          setMic(st === 'listening' || st === 'hearing' ? st : 'off');
         }
       },
     );
@@ -312,6 +314,12 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
                   </button>
                 )}
               </div>
+              {!problem && !typing && (
+                <button className="help-btn mic-test-btn" onClick={() => setChecking(true)}>
+                  Test the mic
+                </button>
+              )}
+              {checking && <MicCheck onClose={() => setChecking(false)} />}
             </>
           )}
         </div>
@@ -400,7 +408,7 @@ export function Lightning({ round, m, outfit, bests, onLen, onAnswer, onFinish, 
           <>
             <div className={`mic ${mic}`} role="status">
               <span className="mic-dot" aria-hidden="true" />
-              {mic === 'listening' ? 'Listening… say the answer!' : 'Starting the mic…'}
+              {mic === 'hearing' ? 'I hear you…' : mic === 'listening' ? 'Listening… say the answer!' : 'Starting the mic…'}
             </div>
             <button
               className="help-btn"

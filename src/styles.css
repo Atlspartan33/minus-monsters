@@ -1469,6 +1469,33 @@ button:disabled {
   background: #ff4d6d;
   animation: glow 1s ease-in-out infinite;
 }
+.mic.hearing .mic-dot {
+  background: var(--lime);
+  transform: scale(1.35);
+  transition: transform 0.1s ease;
+}
+.mic-test-btn {
+  margin-top: 4px;
+}
+.mic-check .big-mic {
+  font-size: clamp(1.3rem, 3dvh, 1.8rem);
+  max-width: 560px;
+}
+.mic-heard {
+  font-size: clamp(1.4rem, 3.4dvh, 2rem);
+  color: #fff;
+  min-height: 1.4em;
+}
+.mic-log {
+  max-width: 560px;
+  margin: 0;
+  color: var(--soft);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.mic-done {
+  max-width: 320px;
+}
 .lightning.talking .pad-wrap {
   padding-bottom: 8px;
 }

@@ -12,6 +12,8 @@ type SR = {
   onend: (() => void) | null;
   onstart: (() => void) | null;
   onerror: ((e: { error: string }) => void) | null;
+  onsoundstart?: (() => void) | null;
+  onsoundend?: (() => void) | null;
 };
 type SREvent = { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> };
 type SRCtor = new () => SR;
@@ -73,93 +75,165 @@ export interface Listener {
   mark(): void;
 }
 
+export type MicState = 'listening' | 'hearing' | 'idle' | 'blocked' | 'offline';
+
+// One phrase per session (continuous mode is unreliable on Android: duplicate, missing or
+// never-final results), restarted after a short pause because start() inside onend can
+// throw while the old session winds down. A watchdog revives a session that silently died.
 export function createListener(
   onHeard: (h: Heard) => void,
-  onState: (s: 'listening' | 'idle' | 'blocked' | 'offline') => void,
+  onState: (s: MicState) => void,
+  onLog?: (event: string) => void,
 ): Listener | null {
   const C = ctor();
   if (!C || !window.isSecureContext) return null;
-  const r = new C();
-  r.lang = 'en-US';
-  r.continuous = true;
-  r.interimResults = true;
-  r.maxAlternatives = 5;
+  const log = (ev: string) => onLog?.(ev);
+  let r: SR | null = null;
   let want = false;
-  // False between mark() and the fresh session starting, so a late result from the old problem is dropped.
-  let live = false;
-  let refreshing = false;
-  let restarts: number[] = [];
+  let running = false; // a session is open (start called, end not yet seen)
+  let sid = 0; // session counter
+  let staleSid = -1; // a session whose speech belongs to the previous problem
+  let heardInSession = false;
+  let lastEvent = 0;
+  let fails: number[] = [];
+  let retry = 0;
+  let dog = 0;
 
-  r.onresult = (e) => {
-    if (!want || !live) return; // stopped or between problems: drop anything still in flight
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const res = e.results[i];
-      const alts: number[][] = [];
-      for (let j = 0; j < res.length; j++) alts.push(parseNumbers(res[j].transcript));
-      onHeard({ text: res[0]?.transcript ?? '', alts, final: res.isFinal });
+  const make = () => {
+    const x = new C();
+    x.lang = 'en-US';
+    x.continuous = false;
+    x.interimResults = true;
+    x.maxAlternatives = 5;
+    x.onstart = () => {
+      lastEvent = Date.now();
+      log('start');
+      if (want) onState('listening');
+    };
+    x.onsoundstart = () => {
+      lastEvent = Date.now();
+      log('sound');
+      if (want) onState('hearing');
+    };
+    x.onsoundend = () => {
+      if (want) onState('listening');
+    };
+    x.onresult = (e) => {
+      lastEvent = Date.now();
+      heardInSession = true;
+      if (!want || sid === staleSid) return; // stopped, or speech left over from the last problem
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        const alts: number[][] = [];
+        for (let j = 0; j < res.length; j++) alts.push(parseNumbers(res[j].transcript));
+        log(`${res.isFinal ? 'heard' : 'hearing'}: ${res[0]?.transcript ?? ''}`);
+        onHeard({ text: res[0]?.transcript ?? '', alts, final: res.isFinal });
+      }
+    };
+    x.onerror = (e) => {
+      lastEvent = Date.now();
+      log(`error: ${e.error}`);
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+        give('blocked');
+      } else if (e.error === 'network' || e.error === 'language-not-supported') {
+        give('offline');
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        bump();
+      }
+    };
+    x.onend = () => {
+      running = false;
+      log('end');
+      if (want) queue(120);
+      else onState('idle');
+    };
+    return x;
+  };
+
+  const give = (st: 'blocked' | 'offline') => {
+    if (!want) return;
+    want = false;
+    clearInterval(dog);
+    clearTimeout(retry);
+    try {
+      r?.abort();
+    } catch {
+      /* gone */
+    }
+    onState(st);
+  };
+
+  // Real failures (not silence) in a burst mean the recognizer can't work here.
+  const bump = () => {
+    const now = Date.now();
+    fails = [...fails.filter((t) => now - t < 8000), now];
+    if (fails.length > 4) give('offline');
+  };
+
+  const open = () => {
+    if (!want || running) return;
+    r ??= make();
+    sid++;
+    heardInSession = false;
+    lastEvent = Date.now();
+    try {
+      r.start();
+      running = true;
+    } catch {
+      // Still winding down: try again shortly with a fresh recognizer.
+      log('start failed');
+      r = make();
+      bump();
+      queue(400);
     }
   };
-  r.onstart = () => {
-    live = true;
-    onState('listening');
-  };
-  // Android ends the session after a pause; keep it going while the round runs.
-  r.onend = () => {
-    live = false;
-    if (want) {
-      // Don't spin if the recognizer keeps dying (no network, busy mic). Our own restarts don't count.
-      const now = Date.now();
-      if (!refreshing) restarts = [...restarts.filter((t) => now - t < 3000), now];
-      refreshing = false;
-      if (restarts.length > 4) {
-        want = false;
-        onState('offline');
-        return;
-      }
-      try {
-        r.start();
-      } catch {
-        /* already starting */
-      }
-    } else onState('idle');
-  };
-  r.onerror = (e) => {
-    if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
-      want = false;
-      onState('blocked');
-    } else if (e.error === 'network' || e.error === 'language-not-supported') {
-      want = false;
-      onState('offline');
-    }
+
+  const queue = (ms: number) => {
+    clearTimeout(retry);
+    retry = window.setTimeout(open, ms);
   };
 
   return {
     start() {
+      if (want) return;
       want = true;
-      try {
-        r.start();
-      } catch {
-        /* already running */
-      }
+      fails = [];
+      open();
+      // A session that's open but silent for 9s (or never opened) gets replaced.
+      dog = window.setInterval(() => {
+        if (!want) return;
+        if (!running) queue(0);
+        else if (Date.now() - lastEvent > 9000) {
+          log('stuck: restarting');
+          try {
+            r?.abort();
+          } catch {
+            /* gone */
+          }
+          running = false;
+          r = make();
+          queue(150);
+        }
+      }, 1000);
     },
     stop() {
       want = false;
+      clearInterval(dog);
+      clearTimeout(retry);
       try {
-        r.abort();
+        r?.abort();
       } catch {
         /* not running */
       }
     },
-    // Result positions can't be trusted (Android hands each phrase over as a one-item list),
-    // so a new problem gets a fresh session instead of an index cutoff.
     mark() {
-      live = false;
-      if (!want) return;
-      refreshing = true;
+      // A phrase already underway belongs to the old problem; a quiet session can keep listening.
+      if (!heardInSession || !running) return;
+      staleSid = sid;
       try {
-        r.abort();
+        r?.abort(); // onend opens a fresh session
       } catch {
-        refreshing = false;
+        /* gone */
       }
     },
   };
